@@ -102,6 +102,7 @@ VIEW_CASES: list[tuple[str, str, str, object]] = [
     ("foxhunter_view",     "bigbox.ui.foxhunter",        "FoxhunterView",         None),
     ("mission_report_view","bigbox.ui.mission_report",   "MissionReportView",     lambda C: C()),
     ("ghost_mode_view",    "bigbox.ui.ghost_mode",       "GhostModeView",         lambda C: C()),
+    ("handshake_manager_view","bigbox.ui.handshake_manager","HandshakeManagerView",  lambda C: C()),
     ("games_view",         "bigbox.ui.games",            "GamesView",             None),
     ("tracker_view",       "bigbox.ui.trackers",         "TrackerView",           None),
     ("probe_view",         "bigbox.ui.wifi_lite",        "ProbeSnifferView",      None),

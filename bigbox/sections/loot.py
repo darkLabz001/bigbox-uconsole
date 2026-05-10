@@ -10,6 +10,10 @@ def _loot_gallery(ctx: SectionContext) -> None:
     ctx.show_loot_gallery()
 
 
+def _handshake_manager(ctx: SectionContext) -> None:
+    ctx.show_handshake_manager()
+
+
 def _vault(ctx: SectionContext) -> None:
     ctx.show_vault()
 
@@ -85,7 +89,9 @@ def build() -> Section:
         actions=[
             Action("Mission Report", _mission_report, "Session summary and loot aggregator"),
             Action("Loot Gallery", _loot_gallery, "Integrated visualizer for all captured intel"),
-            Action("Secure Vault", _vault, "Password-protected encrypted storage"),
+            Action("Handshake Manager", _handshake_manager, "Verify and upload WPA captures"),
+            Action("Password Vault", _vault, "Secure credential storage"),
+
             Action("Scan History", _scan_history, "Saved ARP and probe-request scans"),
             Action("Tracker History", _tracker_history, "Long-term 'is anything following me' analysis"),
             Action("Ragnar Database", _ragnar_db, "View discovered network entities"),

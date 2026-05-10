@@ -37,6 +37,7 @@ from bigbox.ui.adsb import ADSBView
 from bigbox.ui.pager import PagerView
 from bigbox.ui.mission_report import MissionReportView
 from bigbox.ui.ghost_mode import GhostModeView
+from bigbox.ui.handshake_manager import HandshakeManagerView
 
 
 # Foreground-view registry. Render and input both walk this in order;
@@ -108,6 +109,7 @@ _VIEWS: tuple[tuple[str, int], ...] = (
     ("foxhunter_view", 2),
     ("mission_report_view", 2),
     ("ghost_mode_view", 2),
+    ("handshake_manager_view", 2),
     ("games_view", 0),
     ("tracker_view", 2),
     ("probe_view", 2),
@@ -462,6 +464,9 @@ class App:
     def show_ghost_mode(self) -> None:
         self.ghost_mode_view = GhostModeView()
 
+    def show_handshake_manager(self) -> None:
+        self.handshake_manager_view = HandshakeManagerView()
+
     def show_traffic_cam(self) -> None:
         self.traffic_cam_view = TrafficCamView()
 
@@ -614,6 +619,7 @@ class App:
         self.foxhunter_view = None
         self.mission_report_view = None
         self.ghost_mode_view = None
+        self.handshake_manager_view = None
         self.traffic_cam_view = None
         self.camera_view = None
         self.wifite_view = None

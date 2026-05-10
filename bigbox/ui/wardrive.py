@@ -191,6 +191,43 @@ class WardriveView:
         self.last_found: _Observation | None = None
         self.handshake_count = 0
         
+        self._last_geiger = 0.0
+        self._geiger_sound: Optional[pygame.mixer.Sound] = None
+        self._init_geiger()
+
+    def _init_geiger(self):
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            import array
+            import random
+            sample_rate = 44100
+            duration = 0.005 # Very short click
+            n_samples = int(sample_rate * duration)
+            buf = array.array('h', [0] * n_samples)
+            for i in range(n_samples):
+                buf[i] = random.randint(-16000, 16000) # Noise
+            self._geiger_sound = pygame.mixer.Sound(buffer=buf)
+            self._geiger_sound.set_volume(0.1)
+        except Exception:
+            pass
+
+    def _play_geiger(self, npm: float):
+        if not self._geiger_sound: return
+        if npm < 0.1: return
+        
+        # Interval between clicks (seconds)
+        # npm=10 -> 6s interval
+        # npm=100 -> 0.6s interval
+        # npm=600 -> 0.1s interval (crackle)
+        interval = 60.0 / max(1.0, npm)
+        # Max interval of 2 seconds for feedback even in slow areas
+        interval = min(2.0, interval)
+        
+        if time.time() - self._last_geiger > interval:
+            self._last_geiger = time.time()
+            self._geiger_sound.play()
+        
         self._csv_path: Path | None = None
         self._csv_handle = None
         self._capture_started: float = 0.0
@@ -425,6 +462,10 @@ class WardriveView:
             obs.first_seen_iso = fix.timestamp_iso or _now_iso()
             self.observed[obs.mac] = obs
             self.last_found = obs
+            
+            # Achievements
+            from bigbox import achievements
+            achievements.report_node(is_bt=(obs.type == "BT"))
 
         self._play_beep()
 
@@ -750,6 +791,9 @@ class WardriveView:
         # Calculate NPM (Nodes Per Minute)
         total_nodes = wifi_count + bt_count
         npm = (total_nodes / (elapsed / 60.0)) if elapsed > 10 else 0
+        
+        # Geiger audio
+        self._play_geiger(npm)
 
         f_huge = pygame.font.Font(None, 80)
         f_med = pygame.font.Font(None, 26)

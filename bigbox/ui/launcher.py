@@ -149,7 +149,6 @@ class Launcher:
         surf.blit(f_stat_bold.render("OPSEC_STATUS", True, theme.ACCENT), (15, sy))
         sy += 25
         
-        # Check for Tor / VPN (Mock for now, will connect to real state soon)
         is_tor = os.path.exists("/run/tor/tor.pid")
         tor_col = (100, 255, 100) if is_tor else theme.FG_DIM
         surf.blit(f_stat.render(f"ANONSURF: {'ACTIVE' if is_tor else 'OFF'}", True, tor_col), (15, sy))
@@ -158,7 +157,43 @@ class Launcher:
         is_vpn = os.path.exists("/proc/sys/net/ipv4/conf/tun0")
         vpn_col = (100, 255, 100) if is_vpn else theme.FG_DIM
         surf.blit(f_stat.render(f"VPN_TUN: {'CONNECTED' if is_vpn else 'OFF'}", True, vpn_col), (15, sy))
-        sy += 30
+        sy += 35
+
+        # --- Achievements ---
+        from bigbox import achievements
+        from bigbox.achievements import RANKS
+        state = achievements.get_state()
+        surf.blit(f_stat_bold.render("OPERATOR_RANK", True, theme.ACCENT), (15, sy))
+        sy += 25
+        
+        rank = state.get_rank()
+        surf.blit(f_stat.render(rank, True, theme.FG), (15, sy))
+        sy += 20
+        
+        surf.blit(f_stat.render(f"LEVEL: {state.level}", True, theme.FG_DIM), (15, sy))
+        sy += 22
+        
+        # XP Bar
+        bar_w = 170
+        bar_h = 8
+        pygame.draw.rect(surf, (30, 35, 45), (15, sy, bar_w, bar_h), border_radius=4)
+        
+        # XP progress calculation (simple version for now)
+        next_xp = state.next_rank_xp()
+        current_rank_xp = 0
+        for r_xp, r_name in reversed(RANKS):
+            if state.xp >= r_xp:
+                current_rank_xp = r_xp
+                break
+        
+        needed = next_xp - current_rank_xp
+        got = state.xp - current_rank_xp
+        if needed > 0:
+            pct = min(1.0, got / needed)
+            pygame.draw.rect(surf, theme.ACCENT, (15, sy, int(bar_w * pct), bar_h), border_radius=4)
+        
+        sy += 15
+        surf.blit(f_stat.render(f"{state.xp} XP", True, theme.FG_DIM), (15, sy))
 
         # 3. Grid Layout (Shifted Right)
         margin_x = sidebar_w + 30
