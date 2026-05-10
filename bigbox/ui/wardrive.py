@@ -29,7 +29,7 @@ from pathlib import Path
 
 import pygame
 
-from bigbox import hardware, theme, wigle
+from bigbox import hardware, theme, wigle, oui
 from bigbox.events import Button, ButtonEvent
 from bigbox.gps import GPSFix, GPSReader
 from bigbox.ui.section import SectionContext
@@ -54,6 +54,8 @@ class _Observation:
     authmode: str = "[]"
     channel: int = 0
     rssi: int = -100
+    vendor: str = ""   # Added: Vendor from OUI lookup
+    klass: str = ""    # Added: Heuristic device class
     first_seen_iso: str = ""
     first_lat: float = 0.0
     first_lon: float = 0.0
@@ -371,6 +373,9 @@ class WardriveView:
                 if self.last_found and self.last_found.mac == obs.mac:
                     self.last_found.rssi = obs.rssi
                 return
+            
+            # Lookup vendor
+            obs.vendor, obs.klass = oui.lookup(obs.mac)
             
             fix = self.gps.latest()
             if not fix.has_fix:
@@ -695,12 +700,14 @@ class WardriveView:
             pygame.draw.rect(surf, theme.BG_ALT, (theme.PADDING, ly, theme.SCREEN_W - 2*theme.PADDING, 60), border_radius=5)
             pygame.draw.rect(surf, theme.ACCENT, (theme.PADDING, ly, theme.SCREEN_W - 2*theme.PADDING, 60), 1, border_radius=5)
             
-            l_title = f_small.render("LAST DISCOVERY", True, theme.ACCENT)
+            l_title = f_small.render(f"LAST DISCOVERY: {last.type}", True, theme.ACCENT)
             surf.blit(l_title, (theme.PADDING + 10, ly + 8))
             
             ssid = last.ssid or "<hidden>"
-            if len(ssid) > 30: ssid = ssid[:27] + "..."
-            info = f"{ssid} [{last.mac}]  {last.rssi}dBm  {last.authmode}"
+            if len(ssid) > 20: ssid = ssid[:17] + "..."
+            
+            vendor_str = f"({last.vendor})" if last.vendor and last.vendor != "Unknown" else ""
+            info = f"{ssid} [{last.mac}] {vendor_str}  {last.rssi}dBm  {last.authmode}"
             l_info = f_med.render(info, True, theme.FG)
             surf.blit(l_info, (theme.PADDING + 10, ly + 30))
 

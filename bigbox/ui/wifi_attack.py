@@ -28,9 +28,9 @@ from pathlib import Path
 
 import pygame
 
-from bigbox import theme
+from bigbox import theme, oui
 from bigbox.events import Button, ButtonEvent
-from bigbox.ui.section import SectionContext
+from bigbox.ui.section import Action, SectionContext
 
 
 PHASE_PICK_IFACE = "iface"
@@ -174,6 +174,8 @@ class WifiAttackView:
         self.targeted_ap: AP | None = None
 
         self.handshake_captured = False
+        self.handshake_verified = False
+        self.filter_low_signal = False
         self.deauth_count = 0
         self.capture_prefix: Path | None = None
         self._capture_csv_path: Path | None = None
@@ -309,6 +311,27 @@ class WifiAttackView:
         from bigbox import background as _bg
         _bg.unregister("wifi_attack")
 
+    def _verify_handshake(self) -> None:
+        """Use aircrack-ng to confirm the capture contains a valid handshake."""
+        if not self.capture_prefix:
+            return
+        cap_file = Path(str(self.capture_prefix) + "-01.cap")
+        if not cap_file.exists():
+            return
+        
+        try:
+            # aircrack-ng will exit with 0 if it finds a handshake in the file
+            res = subprocess.run(
+                ["aircrack-ng", str(cap_file)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, timeout=5
+            )
+            if "1 handshake" in res.stdout:
+                self.handshake_verified = True
+                self.status_msg = "VERIFIED HANDSHAKE!"
+        except Exception:
+            pass
+
     def _watch_airodump_stdout(self) -> None:
         proc = self._airodump
         if not proc or not proc.stdout:
@@ -319,12 +342,17 @@ class WifiAttackView:
             if "WPA handshake" in line:
                 self.handshake_captured = True
                 self.status_msg = "HANDSHAKE CAPTURED"
+                # Give it a second to write to disk, then verify
+                threading.Timer(2.0, self._verify_handshake).start()
 
     def _poll_csv(self) -> None:
         while not self._stop:
             if self._capture_csv_path:
                 aps, clients = _read_airodump_csv(self._capture_csv_path)
                 if aps:
+                    # Filter low signal if requested
+                    if self.filter_low_signal:
+                        aps = [a for a in aps if a.power >= -80]
                     # Sort by signal strength (closer = higher = more negative dBm)
                     aps.sort(key=lambda a: a.power, reverse=True)
                     self.aps = aps
@@ -394,6 +422,9 @@ class WifiAttackView:
         if self.phase == PHASE_SCAN_APS:
             if ev.button is Button.B:
                 self._cleanup_and_exit()
+            elif ev.button is Button.X:
+                self.filter_low_signal = not self.filter_low_signal
+                self.status_msg = f"Filter (<-80dBm): {'ON' if self.filter_low_signal else 'OFF'}"
             elif not self.aps:
                 return
             elif ev.button is Button.UP:
@@ -407,6 +438,7 @@ class WifiAttackView:
                 self.client_cursor = 0
                 self.clients = []
                 self.handshake_captured = False
+                self.handshake_verified = False
                 self.deauth_count = 0
                 self.phase = PHASE_TARGET_AP
                 self.status_msg = f"Locked on {self.targeted_ap.display}"
@@ -511,7 +543,7 @@ class WifiAttackView:
         if self.phase == PHASE_PICK_IFACE:
             return "A: Use  B: Back"
         if self.phase == PHASE_SCAN_APS:
-            return "A: Target  B: Back"
+            return "X: Filter  A: Target  B: Back"
         if self.phase == PHASE_TARGET_AP:
             return "X: Deauth  B: Back"
         if self.phase == PHASE_CONFIRM_DEAUTH:
@@ -585,7 +617,11 @@ class WifiAttackView:
                 color = theme.ACCENT
             else:
                 color = theme.FG
-            label = f_main.render(f"{ap.display}", True, color)
+            
+            vendor, _ = oui.lookup(ap.bssid)
+            vendor_str = f"({vendor})" if vendor and vendor != "Unknown" else ""
+            
+            label = f_main.render(f"{ap.display} {vendor_str}", True, color)
             surf.blit(label, (rect.x + 10, rect.y + 4))
             meta = f"{ap.bssid}  ch{ap.channel}  {ap.power}dBm  {ap.privacy}"
             ms = f_meta.render(meta, True, theme.FG_DIM)
@@ -615,9 +651,17 @@ class WifiAttackView:
 
         # Handshake indicator
         ind_x = theme.SCREEN_W - 220
-        col = theme.ACCENT if self.handshake_captured else theme.WARN
+        if self.handshake_verified:
+            col = theme.ACCENT
+            label = "HANDSHAKE VERIFIED"
+        elif self.handshake_captured:
+            col = theme.WARN
+            label = "CAPTURED (verifying...)"
+        else:
+            col = theme.FG_DIM
+            label = "WAITING..."
+            
         pygame.draw.circle(surf, col, (ind_x, banner_y + 14), 10)
-        label = "HANDSHAKE OK" if self.handshake_captured else "WAITING..."
         l_surf = f_small.render(label, True, col)
         surf.blit(l_surf, (ind_x + 18, banner_y + 6))
         d_surf = f_small.render(f"deauth: {self.deauth_count}",
