@@ -75,6 +75,7 @@ class SignalScraperView:
         self.ifaces = _list_wlan_ifaces()
         self.iface_cursor = 0
         self.mon_iface: str | None = None
+        self.original_iface: str | None = None
         
         self.devices: Dict[str, ScrapedDevice] = {}
         self.cursor = 0
@@ -205,7 +206,18 @@ class SignalScraperView:
             if ev.button is Button.UP: self.iface_cursor = (self.iface_cursor - 1) % len(self.ifaces)
             elif ev.button is Button.DOWN: self.iface_cursor = (self.iface_cursor + 1) % len(self.ifaces)
             elif ev.button is Button.A:
-                threading.Thread(target=self._enable_monitor, args=(self.ifaces[self.iface_cursor].name,), daemon=True).start()
+                iface = self.ifaces[self.iface_cursor].name
+                # Dependencies
+                missing = hardware.check_dependencies("airodump-ng", "btmon", "bluetoothctl")
+                if missing:
+                    self.status_msg = f"Missing: {', '.join(missing)}"
+                    return
+                # Lock
+                if not hardware.request_iface(iface):
+                    self.status_msg = f"{iface} is busy"
+                    return
+                self.original_iface = iface
+                threading.Thread(target=self._enable_monitor, args=(iface,), daemon=True).start()
             return
         if self.phase == PHASE_SCANNING:
             count = len(self.devices)
@@ -237,7 +249,7 @@ class SignalScraperView:
 
     def _cleanup(self):
         self._stop = True
-        
+
         # 1. Kill background profile processes
         for proc in [self._airodump, self._btmon]:
             if proc and proc.poll() is None:
@@ -251,17 +263,12 @@ class SignalScraperView:
 
         # 2. Stop Bluetooth scan
         subprocess.run(["bluetoothctl", "scan", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
+
         # 3. Disable monitor mode and restore NetworkManager
-        if self.mon_iface:
-            subprocess.run(["airmon-ng", "stop", self.mon_iface], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            # Restore managed mode and services
-            subprocess.run(["nmcli", "networking", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["systemctl", "restart", "NetworkManager"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self.mon_iface = None
-            
-        # Global safety recovery
-        hardware.ensure_wifi_managed()
+        if self.original_iface:
+            hardware.release_iface(self.original_iface)
+        hardware.ensure_wifi_managed(self.mon_iface)
+        self.mon_iface = None
 
     def _adjust_scroll(self):
         visible = 11

@@ -13,7 +13,55 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import threading
 from typing import Iterable
+
+
+_lock = threading.Lock()
+_IN_USE_IFACES: set[str] = set()
+_IN_USE_BT: set[str] = set()
+
+
+def check_dependencies(*binaries: str) -> list[str]:
+    """Check if a list of binaries are in the PATH.
+    Returns a list of missing binary names."""
+    missing = []
+    for b in binaries:
+        if not shutil.which(b):
+            missing.append(b)
+    return missing
+
+
+def request_iface(iface: str) -> bool:
+    """Mark a Wi-Fi interface as in-use. Returns False if already busy."""
+    with _lock:
+        if iface in _IN_USE_IFACES:
+            return False
+        _IN_USE_IFACES.add(iface)
+        return True
+
+
+def release_iface(iface: str) -> None:
+    """Mark a Wi-Fi interface as available."""
+    with _lock:
+        if iface in _IN_USE_IFACES:
+            _IN_USE_IFACES.remove(iface)
+
+
+def request_bluetooth(hci: str) -> bool:
+    """Mark a BT controller as in-use."""
+    with _lock:
+        if hci in _IN_USE_BT:
+            return False
+        _IN_USE_BT.add(hci)
+        return True
+
+
+def release_bluetooth(hci: str) -> None:
+    """Mark a BT controller as available."""
+    with _lock:
+        if hci in _IN_USE_BT:
+            _IN_USE_BT.remove(hci)
 
 
 def _run(cmd: list[str], timeout: float = 5.0) -> tuple[int, str]:

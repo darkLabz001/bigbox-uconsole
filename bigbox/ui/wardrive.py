@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -208,6 +209,35 @@ class WardriveView:
 
     # ---------- session lifecycle ----------
     def _start_capture(self) -> None:
+        # Check dependencies
+        missing = hardware.check_dependencies("iw", "bluetoothctl", "hcxdumptool")
+        # Note: hcxdumptool is optional but we check it anyway if we have a cap_iface
+        if not shutil.which("iw") or not shutil.which("bluetoothctl"):
+            self.status_msg = "Error: iw or bluetoothctl missing"
+            return
+
+        # Try to lock interfaces
+        locked_ifaces = []
+        for iface in self.ifaces:
+            if hardware.request_iface(iface):
+                locked_ifaces.append(iface)
+        
+        if not locked_ifaces:
+            self.status_msg = "Error: All Wi-Fi interfaces busy"
+            return
+        
+        # Lock bluetooth
+        hci = hardware.preferred_bluetooth_controller()
+        if hci and not hardware.request_bluetooth(hci):
+            self.status_msg = f"Error: {hci} busy"
+            # We can still wardrive with just Wi-Fi, but let's be strict for reliability
+            for iface in locked_ifaces:
+                hardware.release_iface(iface)
+            return
+
+        self.locked_ifaces = locked_ifaces
+        self.locked_hci = hci
+
         LOOT_DIR.mkdir(parents=True, exist_ok=True)
         ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         self._csv_path = LOOT_DIR / f"wardrive_{ts}.csv"
@@ -299,6 +329,12 @@ class WardriveView:
         if self.mon_iface:
             hardware.ensure_wifi_managed(self.cap_iface_raw)
             self.mon_iface = None
+
+        # Release locks
+        for iface in getattr(self, "locked_ifaces", []):
+            hardware.release_iface(iface)
+        if getattr(self, "locked_hci", None):
+            hardware.release_bluetooth(self.locked_hci)
 
         # Bring BT down first so we don't leave bluetoothctl scanning.
         if self._bt_proc and self._bt_proc.poll() is None:

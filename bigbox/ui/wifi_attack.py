@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pygame
 
-from bigbox import theme, oui
+from bigbox import theme, oui, hardware
 from bigbox.events import Button, ButtonEvent
 from bigbox.ui.section import Action, SectionContext
 
@@ -410,6 +410,15 @@ class WifiAttackView:
                 self.iface_cursor = (self.iface_cursor + 1) % len(self.ifaces)
             elif ev.button is Button.A:
                 pick = self.ifaces[self.iface_cursor]
+                # Check dependencies first
+                missing = hardware.check_dependencies("airmon-ng", "airodump-ng", "aireplay-ng")
+                if missing:
+                    self.status_msg = f"Missing: {', '.join(missing)}"
+                    return
+                # Try to lock
+                if not hardware.request_iface(pick.name):
+                    self.status_msg = f"{pick.name} is busy"
+                    return
                 threading.Thread(target=self._enable_and_scan,
                                  args=(pick.name,), daemon=True).start()
             return
@@ -491,6 +500,8 @@ class WifiAttackView:
         self.status_msg = "Cleaning up..."
         self._stop_airodump()
         self._disable_monitor()
+        if self.original_iface:
+            hardware.release_iface(self.original_iface)
         self.dismissed = True
 
     def _adjust_scroll(self) -> None:

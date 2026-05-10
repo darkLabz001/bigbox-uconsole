@@ -119,7 +119,7 @@ _VIEWS: tuple[tuple[str, int], ...] = (
 
 # Method names to try when forcibly stopping a view that crashed,
 # checked in order. First one that exists is invoked.
-_STOP_METHODS = ("_stop_run", "_stop_crack", "_stop_capture",
+_STOP_METHODS = ("_cleanup_and_exit", "_stop_run", "_stop_crack", "_stop_capture",
                  "_stop_stream", "_stop_snipe", "_stop", "_shutdown")
 
 
