@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from bigbox.app import App
 
 class UpdateChecker:
-    def __init__(self, app: App, interval_seconds: int = 3600):
+    def __init__(self, app: App, interval_seconds: int = 300): # 5 mins default
         self.app = app
         self.interval = interval_seconds
         self._stop = threading.Event()
@@ -23,6 +23,7 @@ class UpdateChecker:
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        print(f"[update_checker] started (interval: {self.interval}s)")
 
     def stop(self) -> None:
         self._stop.set()
@@ -35,15 +36,18 @@ class UpdateChecker:
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
             
             # 2. Check if main is behind origin/main
-            # rev-list --count main..origin/main returns > 0 if there are new commits
+            # Use 'main@{u}' to check against upstream tracking branch correctly
             res = subprocess.check_output(
                 ["git", "rev-list", "--count", "main..origin/main"],
                 text=True, stderr=subprocess.DEVNULL
             ).strip()
             
             count = int(res)
+            if count > 0:
+                print(f"[update_checker] found {count} new commits")
             return count > 0
-        except Exception:
+        except Exception as e:
+            print(f"[update_checker] check failed: {e}")
             return False
 
     def _run(self) -> None:
