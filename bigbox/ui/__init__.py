@@ -1,5 +1,6 @@
 from bigbox.ui.section import Action, Section, SectionContext
 from bigbox.ui.carousel import Carousel
+from bigbox.ui.launcher import Launcher
 from bigbox.ui.scroll_list import ScrollList
 from bigbox.ui.widgets import MenuView, ResultView, StatusBar
 from bigbox.ui.cctv import CCTVView
@@ -52,6 +53,7 @@ __all__ = [
     "Section",
     "SectionContext",
     "Carousel",
+    "Launcher",
     "ScrollList",
     "MenuView",
     "StatusBar",

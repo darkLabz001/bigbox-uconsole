@@ -2,9 +2,9 @@
 
 - Initializes pygame for the GamePi43's 800x480 panel (or windowed in dev mode).
 - Starts an input source: GPIO buttons on real hardware, keyboard in dev mode.
-- Builds the carousel from `bigbox.sections`.
+- Builds the launcher from `bigbox.sections`.
 - Runs at 60 FPS, draining events and dispatching them to the active screen
-  (the carousel by default, a ResultView when a tool is running).
+  (the launcher by default, a ResultView when a tool is running).
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from bigbox.input.keyboard import translate as kbd_translate
 from bigbox.runner import run_streaming
 from bigbox.sections import build_sections
 from bigbox.update_checker import UpdateChecker
-from bigbox.ui import Carousel, CCTVView, MenuView, ResultView, StatusBar, PingSweepView, KeyboardView, ARPScanView, FlockScannerView, WifiConnectView, CamScannerView, WifiAttackView, OfflineCrackerView, DataSniperView, MediaPlayerView, InternetTVView, YouTubeView, TailscaleView, AnonSurfView, VaultView, BettercapView, MailView, MessengerView, RagnarView, SignalScraperView, TrafficCamView, CameraInterceptorView, WifiteView, ChatView, SherlockView, DeadDropView, BBSView, BLEChatView, OnionChatView, BLESpamView, TerminalView, ThemeManagerView, ShopView, UpdateView, WifiMultiToolView, WardriveView, EvilTwinView, GamesView, TrackerView, ProbeSnifferView, BeaconFloodView, KarmaLiteView
+from bigbox.ui import Launcher, CCTVView, MenuView, ResultView, StatusBar, PingSweepView, KeyboardView, ARPScanView, FlockScannerView, WifiConnectView, CamScannerView, WifiAttackView, OfflineCrackerView, DataSniperView, MediaPlayerView, InternetTVView, YouTubeView, TailscaleView, AnonSurfView, VaultView, BettercapView, MailView, MessengerView, RagnarView, SignalScraperView, TrafficCamView, CameraInterceptorView, WifiteView, ChatView, SherlockView, DeadDropView, BBSView, BLEChatView, OnionChatView, BLESpamView, TerminalView, ThemeManagerView, ShopView, UpdateView, WifiMultiToolView, WardriveView, EvilTwinView, GamesView, TrackerView, ProbeSnifferView, BeaconFloodView, KarmaLiteView
 
 
 # Foreground-view registry. Render and input both walk this in order;
@@ -670,7 +670,7 @@ class App:
         self._start_input()
         self.update_checker.start()
 
-        carousel = Carousel(build_sections())
+        launcher = Launcher(build_sections())
         statusbar = StatusBar()
         body_font = pygame.font.Font(None, theme.FS_BODY)
         title_font = pygame.font.Font(None, theme.FS_TITLE)
@@ -689,7 +689,7 @@ class App:
 
             # 2. Drain logical button events; route to the foreground screen.
             for bev in self.bus.drain():
-                self._dispatch(bev, carousel)
+                self._dispatch(bev, launcher)
 
             # 3. Render.
             now = time.time()
@@ -740,7 +740,7 @@ class App:
                 else:
                     if self.show_status:
                         statusbar.render(screen, self)
-                    carousel.render(screen, body_font, title_font)
+                    launcher.render(screen, body_font, title_font)
 
                 # Cheat sheet overlay — drawn on top of everything
                 # except the screensaver, since the user can't see it
@@ -964,7 +964,7 @@ class App:
             view_label = name.replace("_view", "").upper()
         else:
             rows = []
-            view_label = "CAROUSEL"
+            view_label = "LAUNCHER"
 
         # Universal defaults appended at the bottom.
         defaults = [
@@ -1057,7 +1057,7 @@ class App:
             setattr(self, name, None)
         return True
 
-    def _dispatch(self, bev: ButtonEvent, carousel: Carousel) -> None:
+    def _dispatch(self, bev: ButtonEvent, launcher: Launcher) -> None:
         # Any button event resets the idle clock — keeps screensaver
         # away while the user is interacting.
         self._last_input_ts = time.time()
@@ -1143,7 +1143,7 @@ class App:
                 self._open_system_menu()
                 return
             if bev.button is Button.SELECT:
-                print(f"[bigbox] section={carousel.current.title}")
+                print(f"[bigbox] section={launcher.current.title}")
                 return
             if bev.button is Button.X:
                 self.show_status = not self.show_status
@@ -1152,7 +1152,7 @@ class App:
                 self._take_screenshot()
                 return
 
-        action = carousel.handle(bev, self)   # self satisfies SectionContext
+        action = launcher.handle(bev, self)   # self satisfies SectionContext
         if action and action.handler:
             try:
                 action.handler(self)

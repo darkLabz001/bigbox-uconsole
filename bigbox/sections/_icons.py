@@ -10,7 +10,7 @@ import pygame
 from bigbox import theme
 
 _DIR = Path(__file__).resolve().parents[2] / "assets" / "icons"
-_ICON_H = 28   # match the tab bar height
+_ICON_H = 64   # scaled for grid launcher; views can scale down if needed
 
 # Page background size = full screen minus the status bar and tab bar.
 _BG_W = theme.SCREEN_W
