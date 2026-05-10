@@ -38,6 +38,7 @@ from bigbox.ui.pager import PagerView
 from bigbox.ui.mission_report import MissionReportView
 from bigbox.ui.ghost_mode import GhostModeView
 from bigbox.ui.handshake_manager import HandshakeManagerView
+from bigbox.ui.achievements import AchievementView
 
 
 # Foreground-view registry. Render and input both walk this in order;
@@ -110,6 +111,7 @@ _VIEWS: tuple[tuple[str, int], ...] = (
     ("mission_report_view", 2),
     ("ghost_mode_view", 2),
     ("handshake_manager_view", 2),
+    ("achievement_view", 2),
     ("games_view", 0),
     ("tracker_view", 2),
     ("probe_view", 2),
@@ -174,6 +176,10 @@ class App:
         self.show_status = True
         self.held_buttons: set[Button] = set()
         self.hk_used = False
+        
+        from bigbox import achievements
+        achievements.set_app_ref(self)
+        
         self._last_vol_enforce = 0
         # Idle screensaver / sleep timer — bumped on every button event.
         # 0 thresholds disable; populated from /etc/bigbox/idle.json
@@ -467,6 +473,9 @@ class App:
     def show_handshake_manager(self) -> None:
         self.handshake_manager_view = HandshakeManagerView()
 
+    def show_achievements(self) -> None:
+        self.achievement_view = AchievementView()
+
     def show_traffic_cam(self) -> None:
         self.traffic_cam_view = TrafficCamView()
 
@@ -620,6 +629,7 @@ class App:
         self.mission_report_view = None
         self.ghost_mode_view = None
         self.handshake_manager_view = None
+        self.achievement_view = None
         self.traffic_cam_view = None
         self.camera_view = None
         self.wifite_view = None
