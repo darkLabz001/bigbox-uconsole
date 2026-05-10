@@ -83,6 +83,8 @@ VIEW_CASES: list[tuple[str, str, str, object]] = [
     ("theme_manager_view", "bigbox.ui.theme_manager",    "ThemeManagerView",      None),
     ("shop_view",          "bigbox.ui.shop",             "ShopView",              None),
     ("wardrive_view",      "bigbox.ui.wardrive",         "WardriveView",          None),
+    ("harvester_view",     "bigbox.ui.harvester",        "HarvesterView",         lambda C: C()),
+    ("beacon_bomber_view", "bigbox.ui.beacon_bomber",    "BeaconBomberView",      lambda C: C()),
     ("eviltwin_view",      "bigbox.ui.eviltwin",         "EvilTwinView",          None),
     ("honeypot_view",      "bigbox.ui.honeypot",         "HoneypotView",          lambda C: C()),
     ("captures_view",      "bigbox.ui.captures",         "CapturesView",          lambda C: C()),

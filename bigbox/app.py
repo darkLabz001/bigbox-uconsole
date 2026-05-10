@@ -39,6 +39,8 @@ from bigbox.ui.mission_report import MissionReportView
 from bigbox.ui.ghost_mode import GhostModeView
 from bigbox.ui.handshake_manager import HandshakeManagerView
 from bigbox.ui.achievements import AchievementView
+from bigbox.ui.harvester import HarvesterView
+from bigbox.ui.beacon_bomber import BeaconBomberView
 
 
 # Foreground-view registry. Render and input both walk this in order;
@@ -91,6 +93,8 @@ _VIEWS: tuple[tuple[str, int], ...] = (
     ("theme_manager_view", 2),
     ("shop_view", 2),
     ("wardrive_view", 2),
+    ("harvester_view", 2),
+    ("beacon_bomber_view", 2),
     ("eviltwin_view", 2),
     ("honeypot_view", 2),
     ("captures_view", 2),
@@ -482,6 +486,12 @@ class App:
     def show_wardrive(self) -> None:
         self.wardrive_view = WardriveView()
 
+    def show_harvester(self) -> None:
+        self.harvester_view = HarvesterView()
+
+    def show_beacon_bomber(self) -> None:
+        self.beacon_bomber_view = BeaconBomberView()
+
     def show_eviltwin(self) -> None:
         self.eviltwin_view = EvilTwinView()
 
@@ -638,6 +648,8 @@ class App:
         self.theme_manager_view = None
         self.shop_view = None
         self.wardrive_view = None
+        self.harvester_view = None
+        self.beacon_bomber_view = None
         self.eviltwin_view = None
         self.games_view = None
         self.captures_view = None

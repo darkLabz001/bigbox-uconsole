@@ -21,7 +21,7 @@ import pygame
 from bigbox import hardware, theme
 from bigbox.events import Button, ButtonEvent
 from bigbox.ui.section import SectionContext
-from bigbox.ui.wifi_attack import AP, Client, _list_wlan_ifaces, _read_airodump_csv
+from bigbox.ui.wifi_attack import AP, Client, _list_wlan_ifaces, read_airodump_csv
 
 if TYPE_CHECKING:
     from bigbox.app import App
@@ -142,8 +142,9 @@ class SignalScraperView:
     def _poll_wifi(self):
         while not self._stop:
             if self._capture_csv and self._capture_csv.exists():
-                _, clients = _read_airodump_csv(self._capture_csv)
-                for c in clients:
+                _, clients = read_airodump_csv(self._capture_csv)
+                if clients:
+
                     mac = c.mac.lower()
                     dev = self.devices.get(mac, ScrapedDevice(mac=mac, type="WIFI"))
                     dev.rssi = c.power

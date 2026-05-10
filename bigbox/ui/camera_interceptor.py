@@ -15,7 +15,7 @@ import pygame
 
 from bigbox import hardware, theme
 from bigbox.events import Button, ButtonEvent
-from bigbox.ui.wifi_attack import AP, _list_wlan_ifaces, _read_airodump_csv
+from bigbox.ui.wifi_attack import AP, _list_wlan_ifaces, read_airodump_csv
 
 if TYPE_CHECKING:
     from bigbox.app import App
@@ -96,8 +96,9 @@ class CameraInterceptorView:
     def _poll_csv(self):
         while not self._stop:
             if self._capture_csv and self._capture_csv.exists():
-                aps, _ = _read_airodump_csv(self._capture_csv)
-                for ap in aps:
+                aps, _ = read_airodump_csv(self._capture_csv)
+                if aps:
+
                     mac = ap.bssid.upper()
                     vendor = self._get_vendor(mac)
                     is_cam = any(x in vendor.upper() for x in ["AXIS", "BOSCH", "HIKVISION", "DAHUA", "SAMSUNG", "PELCO", "HANWHA", "VIVOTEK"]) or \

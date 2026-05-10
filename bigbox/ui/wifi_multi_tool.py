@@ -22,7 +22,7 @@ from bigbox import theme
 from bigbox import eviltwin as et
 from bigbox.events import Button, ButtonEvent
 from bigbox.ui.section import SectionContext
-from bigbox.ui.wifi_attack import AP, Client, _list_wlan_ifaces, _read_airodump_csv
+from bigbox.ui.wifi_attack import AP, Client, _list_wlan_ifaces, read_airodump_csv
 
 if TYPE_CHECKING:
     from bigbox.app import App
@@ -353,7 +353,7 @@ class WifiMultiToolView:
         def poll():
             while not self._stop:
                 if hasattr(self, '_capture_csv_path') and self._capture_csv_path.exists():
-                    aps, clients = _read_airodump_csv(self._capture_csv_path)
+                    aps, clients = read_airodump_csv(self._capture_csv_path)
                     if aps: self.aps = sorted(aps, key=lambda a: a.power, reverse=True)
                     if self.targeted_ap:
                         self.clients = [c for c in clients if c.bssid.upper() == self.targeted_ap.bssid.upper()]

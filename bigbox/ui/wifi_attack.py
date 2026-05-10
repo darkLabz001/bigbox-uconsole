@@ -96,7 +96,7 @@ def _list_wlan_ifaces() -> list[_Iface]:
     return ifaces
 
 
-def _read_airodump_csv(path: Path) -> tuple[list[AP], list[Client]]:
+def read_airodump_csv(path: Path) -> tuple[list[AP], list[Client]]:
     """airodump-ng CSV: APs section, blank line, then Clients section."""
     aps: list[AP] = []
     clients: list[Client] = []
@@ -348,7 +348,7 @@ class WifiAttackView:
     def _poll_csv(self) -> None:
         while not self._stop:
             if self._capture_csv_path:
-                aps, clients = _read_airodump_csv(self._capture_csv_path)
+                aps, clients = read_airodump_csv(self._capture_csv_path)
                 if aps:
                     # Filter low signal if requested
                     if self.filter_low_signal:
