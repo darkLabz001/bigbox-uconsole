@@ -742,7 +742,7 @@ class App:
         }
 
         pygame.display.set_caption("bigbox")
-        # Play the Arasaka boot splash (red diamond + "WELCOME TO DaRkb0x" +
+        # Play the Arasaka boot splash (red diamond + "WELCOME TO BigB0X" +
         # psx.mp3 chime) before anything else hits the screen. Skipped in
         # dev mode so we don't sit through it on every restart.
         if not self.dev_mode and not os.environ.get("BIGBOX_NO_SPLASH"):

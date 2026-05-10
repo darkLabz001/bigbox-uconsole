@@ -1,6 +1,6 @@
-# 🎨 DaRkb0x Theme Engine
+# 🎨 BigB0X Theme Engine
 
-Welcome to the official theming guide! The DaRkb0x engine is designed to be highly customizable, allowing you to change colors, background images, and icon sets with simple JSON files.
+Welcome to the official theming guide! The BigB0X engine is designed to be highly customizable, allowing you to change colors, background images, and icon sets with simple JSON files.
 
 ## 📁 Theme Directory Structure
 A complete, detailed theme usually consists of a JSON file and an optional assets folder:
@@ -69,6 +69,6 @@ If you provide an `icons_dir`, the system will search that folder for icons matc
 
 ## 🚀 Installation & Testing
 1. Save your JSON file in `config/themes/`.
-2. Open the **Settings** menu on your DaRkb0x.
+2. Open the **Settings** menu on your BigB0X.
 3. Select **Theme Manager**.
 4. Your new theme will appear in the list! Select it and press **A** to apply.

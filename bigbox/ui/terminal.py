@@ -1,4 +1,4 @@
-"""Terminal — Functional bash terminal for DaRkb0x."""
+"""Terminal — Functional bash terminal for BigB0X."""
 from __future__ import annotations
 
 import os
@@ -90,7 +90,7 @@ class TerminalView:
         pygame.draw.line(surf, theme.ACCENT, (0, head_h-1), (theme.SCREEN_W, head_h-1), 1)
         
         f_title = pygame.font.Font(None, 24)
-        title = f_title.render("BASH TERMINAL :: root@darkb0x", True, theme.ACCENT)
+        title = f_title.render("BASH TERMINAL :: root@bigbox", True, theme.ACCENT)
         surf.blit(title, (10, (head_h - title.get_height()) // 2))
 
         # Terminal lines

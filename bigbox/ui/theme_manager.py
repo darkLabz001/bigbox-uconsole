@@ -30,7 +30,7 @@ class ThemeManagerView:
             self.themes_dir = Path(__file__).resolve().parents[2] / "config" / "themes"
             self.themes_dir.mkdir(parents=True, exist_ok=True)
             
-        self.repo_dir = self.themes_dir / "darkbox-themes"
+        self.repo_dir = self.themes_dir / "bigbox-themes"
         self._load_themes()
 
         self.title_font = pygame.font.Font(None, 36)
@@ -98,7 +98,7 @@ class ThemeManagerView:
         threading.Thread(target=self._git_sync, daemon=True).start()
 
     def _git_sync(self):
-        repo_url = "https://github.com/darkLabz001/darkbox-themes.git"
+        repo_url = "https://github.com/darkLabz001/bigbox-themes.git"
         try:
             if not self.repo_dir.exists():
                 subprocess.run(["git", "clone", repo_url, str(self.repo_dir)], check=True, capture_output=True)

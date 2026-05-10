@@ -16,7 +16,7 @@ jobs:
           # Use curl to send a formatted embed to Discord
           curl -H "Content-Type: application/json" \
                -d '{
-                 "username": "DaRkb0x Updater",
+                 "username": "BigB0X Updater",
                  "avatar_url": "https://github.com/darkLabz001/bigbox/raw/main/assets/icons/settings.png",
                  "embeds": [{
                    "title": "📦 New System Update Available",

