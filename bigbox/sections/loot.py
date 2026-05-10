@@ -76,8 +76,8 @@ def build() -> Section:
     return Section(
         title="Loot",
         icon="[L]",
-        icon_img=load_icon("recon"), # Fallback to recon icon for now
-        background_img=load_background("recon"),
+        icon_img=load_icon("loot"),
+        background_img=load_background("loot"),
         actions=[
             Action("Loot Gallery", _loot_gallery, "Integrated visualizer for all captured intel"),
             Action("Secure Vault", _vault, "Password-protected encrypted storage"),
