@@ -702,6 +702,8 @@ class App:
                     pass
 
             screen.fill(theme.BG)
+            
+            # --- Draw the main UI ---
             # Idle screensaver / auto-poweroff. Suppress when an
             # emulator's running, when any background task is alive,
             # or when the web UI is being mirrored — those count as

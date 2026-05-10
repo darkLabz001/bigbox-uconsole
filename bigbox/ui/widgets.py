@@ -4,16 +4,19 @@ from __future__ import annotations
 import socket
 import time
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bigbox.app import App
 
 import pygame
 
-from bigbox import activity, background, disk, power, theme
+from bigbox import activity, background, disk, power, theme, system, gps
 from bigbox.events import Button, ButtonEvent
 
 
 class StatusBar:
-    """Thin bar across the top: clock, hostname, optional IP."""
+    """Thin bar across the top: clock, hostname, stats, battery."""
 
     def __init__(self) -> None:
         self._hostname = socket.gethostname()
@@ -21,6 +24,8 @@ class StatusBar:
         self._ip = "—"
         self._ts_ip = ""
         self._last_ts_check = 0.0
+        self._gps_reader = gps.GPSReader()
+        self._gps_reader.start()
 
     def _refresh_ip(self) -> None:
         now = time.monotonic()
@@ -51,15 +56,58 @@ class StatusBar:
     def render(self, surf: pygame.Surface, app: Optional[App] = None) -> None:
         self._refresh_ip()
         self._refresh_tailscale_ip()
+        stats = system.get_system_stats()
+        
         bar = pygame.Rect(0, 0, theme.SCREEN_W, theme.STATUS_BAR_H)
         pygame.draw.rect(surf, theme.BG_ALT, bar)
         pygame.draw.line(surf, theme.DIVIDER, (0, bar.bottom - 1), (bar.right, bar.bottom - 1))
         font = pygame.font.Font(None, theme.FS_STATUS)
-        left = font.render(f"bigbox · {self._hostname}", True, theme.FG_DIM)
+        
+        # --- LEFT: hostname + optional indicators ---
+        left_text = f"bigbox · {self._hostname}"
+        left = font.render(left_text, True, theme.FG_DIM)
         surf.blit(left, (theme.PADDING, (bar.height - left.get_height()) // 2))
+        curr_x = theme.PADDING + left.get_width() + 15
 
-        # Update notification takes priority over the activity ticker —
-        # both render in the centered slot.
+        # GPS Indicator
+        fix = self._gps_reader.latest()
+        if fix.has_fix:
+            gps_color = theme.ACCENT
+            gps_text = f"GPS:{fix.sats}"
+        else:
+            gps_color = theme.FG_DIM
+            gps_text = "GPS:—"
+        
+        gps_surf = font.render(gps_text, True, gps_color)
+        surf.blit(gps_surf, (curr_x, (bar.height - gps_surf.get_height()) // 2))
+        curr_x += gps_surf.get_width() + 15
+
+        # WiFi Indicator
+        wifi = stats.get("wifi", {})
+        if wifi.get("ssid"):
+            sig = wifi.get("signal", 0)
+            wifi_color = theme.ACCENT if sig > 30 else theme.WARN
+            wifi_text = f"WIFI:{sig}%"
+            wifi_surf = font.render(wifi_text, True, wifi_color)
+            surf.blit(wifi_surf, (curr_x, (bar.height - wifi_surf.get_height()) // 2))
+            curr_x += wifi_surf.get_width() + 15
+
+        # Recording Indicator
+        if app and getattr(app, "recording_proc", None):
+            import math
+            pulse = int(127 + 128 * math.sin(time.time() * 8))
+            rec_surf = font.render("• REC", True, theme.ERR)
+            rec_surf.set_alpha(pulse)
+            surf.blit(rec_surf, (curr_x, (bar.height - rec_surf.get_height()) // 2))
+            curr_x += rec_surf.get_width() + 15
+
+        # Background-task count
+        task_count = background.count()
+        if task_count > 0:
+            tc = font.render(f"○ {task_count} live", True, theme.WARN)
+            surf.blit(tc, (curr_x, (bar.height - tc.get_height()) // 2))
+
+        # --- CENTER: Notifications / Activity ---
         update_ready = bool(
             app and getattr(app, "update_checker", None)
             and app.update_checker.update_ready
@@ -71,78 +119,56 @@ class StatusBar:
             notif.set_alpha(pulse)
             surf.blit(notif, (theme.SCREEN_W // 2 - notif.get_width() // 2, (bar.height - notif.get_height()) // 2))
         else:
-            # Activity ticker — show the most recent event for 60s
-            # after it fired, then fade out by hiding entirely.
             ev = activity.latest()
             if ev is not None:
                 age = time.time() - ev.ts
                 if age < 60:
-                    age_s = int(age)
-                    age_label = "now" if age_s < 1 else f"{age_s}s"
-                    ticker = font.render(
-                        f"· {ev.message}  ({age_label})", True, theme.FG_DIM)
-                    surf.blit(
-                        ticker,
-                        (theme.SCREEN_W // 2 - ticker.get_width() // 2,
-                         (bar.height - ticker.get_height()) // 2),
-                    )
+                    age_label = "now" if age < 1 else f"{int(age)}s"
+                    ticker = font.render(f"· {ev.message} ({age_label})", True, theme.FG_DIM)
+                    # Limit width to avoid overlapping
+                    if ticker.get_width() > 300:
+                        ticker = font.render(f"· {ev.message[:30]}... ({age_label})", True, theme.FG_DIM)
+                    surf.blit(ticker, (theme.SCREEN_W // 2 - ticker.get_width() // 2, (bar.height - ticker.get_height()) // 2))
 
-        # Recording Indicator
-        if app and getattr(app, "recording_proc", None):
-            import math
-            pulse = int(127 + 128 * math.sin(time.time() * 8))
-            rec_surf = font.render("• REC", True, theme.ERR)
-            rec_surf.set_alpha(pulse)
-            # Place it to the right of the hostname
-            surf.blit(rec_surf, (theme.PADDING + left.get_width() + 20, (bar.height - rec_surf.get_height()) // 2))
+        # --- RIGHT: Clock, Temp, Disk, Battery ---
+        curr_right_x = bar.right - theme.PADDING
+        
+        # Clock
+        clock_str = datetime.now().strftime('%H:%M')
+        clock_surf = font.render(clock_str, True, theme.FG_DIM)
+        curr_right_x -= clock_surf.get_width()
+        surf.blit(clock_surf, (curr_right_x, (bar.height - clock_surf.get_height()) // 2))
+        
+        # Temp
+        temp = stats.get("temp_f")
+        if temp is not None:
+            temp_color = theme.FG_DIM if temp < 140 else theme.WARN
+            temp_surf = font.render(f"{int(temp)}°F", True, temp_color)
+            curr_right_x -= (temp_surf.get_width() + 15)
+            surf.blit(temp_surf, (curr_right_x, (bar.height - temp_surf.get_height()) // 2))
 
-        # Background-task count + free disk indicators sit between
-        # the hostname and the right-side IP/clock block.
-        task_count = background.count()
-        if task_count > 0:
-            tc = font.render(f"○ {task_count} live", True, theme.WARN)
-            tc_x = theme.PADDING + left.get_width() + 80
-            surf.blit(tc, (tc_x, (bar.height - tc.get_height()) // 2))
+        # IP
+        ip_display = self._ts_ip if self._ts_ip else self._ip
+        if ip_display != "—":
+            ip_surf = font.render(ip_display, True, theme.FG_DIM)
+            curr_right_x -= (ip_surf.get_width() + 15)
+            surf.blit(ip_surf, (curr_right_x, (bar.height - ip_surf.get_height()) // 2))
 
-        # Display IPs: Local and optionally Tailscale
-        ip_str = self._ip
-        if self._ts_ip:
-            ip_str = f"TS: {self._ts_ip}   {ip_str}"
-
-        # Free space — color escalates as we approach the auto-rotate
-        # thresholds so the user sees the SD filling before writes fail.
+        # Disk
         free = disk.free_mb()
-        if free < disk.HARD_MB:
-            disk_color = theme.ERR
-        elif free < disk.SOFT_MB:
-            disk_color = theme.WARN
-        else:
-            disk_color = theme.FG_DIM
-        if free >= 1024:
-            disk_str = f"{free / 1024:.1f}G"
-        else:
-            disk_str = f"{free}M"
-
-        right = font.render(
-            f"{ip_str}   {datetime.now().strftime('%H:%M')}",
-            True,
-            theme.FG_DIM,
-        )
-        right_x = bar.right - right.get_width() - theme.PADDING
-        surf.blit(right, (right_x, (bar.height - right.get_height()) // 2))
-
+        disk_color = theme.FG_DIM
+        if free < disk.HARD_MB: disk_color = theme.ERR
+        elif free < disk.SOFT_MB: disk_color = theme.WARN
+        
+        disk_str = f"{free / 1024:.1f}G" if free >= 1024 else f"{free}M"
         disk_surf = font.render(disk_str, True, disk_color)
-        disk_x = right_x - disk_surf.get_width() - 16
-        surf.blit(disk_surf,
-                  (disk_x, (bar.height - disk_surf.get_height()) // 2))
+        curr_right_x -= (disk_surf.get_width() + 15)
+        surf.blit(disk_surf, (curr_right_x, (bar.height - disk_surf.get_height()) // 2))
 
-        # Battery indicator — themed glyph + percentage. Only renders
-        # when a UPS HAT / PiSugar is detected; bare Pi 4 with no
-        # power source returns None and we silently skip.
+        # Battery
         batt = power.battery()
         if batt is not None:
-            self._draw_battery(surf, font, batt,
-                               disk_x - 12, bar.height)
+            self._draw_battery(surf, font, batt, curr_right_x - 12, bar.height)
 
     @staticmethod
     def _draw_battery(surf: pygame.Surface, font: pygame.font.Font,
