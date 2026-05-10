@@ -59,21 +59,11 @@ class ScrollList:
             selected = i == self.selected
             
             if selected:
-                # White glow effect for selection
-                pulse = int(20 + 15 * math.sin(time.time() * 5))
-                glow_rect = row.inflate(0, -2)
-                pygame.draw.rect(surf, (255, 255, 255, pulse), glow_rect)
+                pygame.draw.rect(surf, theme.SELECTION_BG, row)
                 pygame.draw.rect(surf, theme.SELECTION, row, width=2)
                 
             label_color = theme.SELECTION if selected else theme.FG
             label = font.render(act.label, True, label_color)
-            
-            # If selected, draw a tiny "glow" behind the text
-            if selected:
-                glow_label = font.render(act.label, True, (255, 255, 255))
-                glow_label.set_alpha(40)
-                surf.blit(glow_label, (row.x + theme.PADDING + 1, row.y + (row_h - label.get_height()) // 2 + 1))
-
             surf.blit(label, (row.x + theme.PADDING, row.y + (row_h - label.get_height()) // 2))
             if act.description:
                 desc_font = pygame.font.Font(None, theme.FS_SMALL)
