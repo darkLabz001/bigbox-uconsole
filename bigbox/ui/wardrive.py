@@ -610,6 +610,11 @@ class WardriveView:
         fix = self.gps.latest()
         f = pygame.font.Font(None, 22)
         y = head_h + 8
+        
+        # Draw background for strip
+        pygame.draw.rect(surf, (5, 5, 15), (0, head_h, theme.SCREEN_W, 30))
+        pygame.draw.line(surf, theme.DIVIDER, (0, head_h + 30), (theme.SCREEN_W, head_h + 30))
+
         if not fix.device_path:
             label = "GPS: NO DEVICE (plug in LC86L)"
             color = theme.ERR
@@ -621,6 +626,26 @@ class WardriveView:
                      f"alt {fix.alt_m:.0f}m  hdop {fix.hdop:.1f}  "
                      f"sats {fix.sats}  {fix.speed_kmh:.0f}km/h")
             color = theme.ACCENT
+            
+            # Graphical Sat HUD (Top Right)
+            sx, sy = theme.SCREEN_W - 140, head_h + 6
+            for i in range(5):
+                h = 4 + i * 3
+                bx = sx + i * 5
+                by = sy + (16 - h)
+                # Color based on fix quality
+                s_col = theme.ACCENT if fix.sats > 4 else theme.WARN
+                if fix.sats > 8: s_col = (100, 255, 100) # Bright green
+                
+                # Active bars based on sat count
+                if i < min(5, fix.sats // 2):
+                    pygame.draw.rect(surf, s_col, (bx, by, 3, h))
+                else:
+                    pygame.draw.rect(surf, (30, 30, 45), (bx, by, 3, h))
+            
+            sat_txt = f.render(f"{fix.sats} SATS", True, theme.FG_DIM)
+            surf.blit(sat_txt, (sx + 30, sy + 2))
+
         s = f.render(label, True, color)
         surf.blit(s, (theme.PADDING, y))
 
@@ -702,6 +727,10 @@ class WardriveView:
             last = self.last_found
 
         elapsed = int(time.time() - self._capture_started)
+        
+        # Calculate NPM (Nodes Per Minute)
+        total_nodes = wifi_count + bt_count
+        npm = (total_nodes / (elapsed / 60.0)) if elapsed > 10 else 0
 
         f_huge = pygame.font.Font(None, 80)
         f_med = pygame.font.Font(None, 26)
@@ -710,6 +739,12 @@ class WardriveView:
         # Big counter row
         cy = head_h + 80
         col_w = theme.SCREEN_W // 3
+        
+        # NPM HUD (Top Right during capture)
+        nx, ny = theme.SCREEN_W - 120, head_h + 40
+        npm_surf = f_small.render(f"{npm:.1f} NPM", True, theme.ACCENT if npm > 5 else theme.FG_DIM)
+        surf.blit(npm_surf, (nx, ny))
+        pygame.draw.line(surf, theme.ACCENT, (nx, ny + 18), (nx + 60, ny + 18), 1)
 
         wifi_n = f_huge.render(str(wifi_count), True, theme.ACCENT)
         surf.blit(wifi_n, (col_w // 2 - wifi_n.get_width() // 2, cy))
