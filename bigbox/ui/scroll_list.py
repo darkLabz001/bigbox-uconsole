@@ -34,6 +34,24 @@ class ScrollList:
             return self.actions[self.selected]
         return None
 
+    def _draw_skull(self, surf: pygame.Surface, x: int, y: int, color: tuple, scale: int = 2) -> None:
+        """Draws a blocky 8x8 skull."""
+        # 0 = empty, 1 = bone
+        pattern = [
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 1, 1, 1, 1, 0, 1],
+            [1, 0, 1, 1, 1, 1, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 0, 0, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0]
+        ]
+        for row_idx, row in enumerate(pattern):
+            for col_idx, val in enumerate(row):
+                if val:
+                    pygame.draw.rect(surf, color, (x + col_idx * scale, y + row_idx * scale, scale, scale))
+
     # ----- render -----
     def render(self, surf: pygame.Surface, rect: pygame.Rect, font: pygame.font.Font) -> None:
         # Update smooth-scroll target so the selected row stays visible.
@@ -62,9 +80,21 @@ class ScrollList:
                 pygame.draw.rect(surf, theme.SELECTION_BG, row)
                 pygame.draw.rect(surf, theme.SELECTION, row, width=2)
                 
+                # --- Animated Skull Marker ---
+                bob = int(math.sin(time.time() * 8) * 3) # bobbing animation
+                skull_x = row.x + theme.PADDING // 2 + bob
+                skull_y = row.y + (row_h - 16) // 2
+                self._draw_skull(surf, skull_x, skull_y, theme.SELECTION, scale=2)
+                
             label_color = theme.SELECTION if selected else theme.FG
             label = font.render(act.label, True, label_color)
-            surf.blit(label, (row.x + theme.PADDING, row.y + (row_h - label.get_height()) // 2))
+            
+            # Offset text if selected to make room for skull
+            text_x = row.x + theme.PADDING
+            if selected:
+                text_x += 25
+
+            surf.blit(label, (text_x, row.y + (row_h - label.get_height()) // 2))
             if act.description:
                 desc_font = pygame.font.Font(None, theme.FS_SMALL)
                 desc = desc_font.render(act.description, True, theme.FG_DIM)
