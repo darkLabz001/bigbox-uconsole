@@ -164,30 +164,40 @@ class ChatView:
         chat_rect = pygame.Rect(theme.PADDING, head_h + theme.PADDING, 
                                 theme.SCREEN_W - 2*theme.PADDING, 
                                 theme.SCREEN_H - head_h - 2*theme.PADDING - 40)
-        pygame.draw.rect(surf, (5, 5, 10), chat_rect)
+        
+        # Draw subtle grid/background for chat area
+        pygame.draw.rect(surf, (12, 14, 22), chat_rect)
+        for x in range(chat_rect.x, chat_rect.right, 40):
+            pygame.draw.line(surf, (20, 22, 32), (x, chat_rect.y), (x, chat_rect.bottom))
+        for y in range(chat_rect.y, chat_rect.bottom, 40):
+            pygame.draw.line(surf, (20, 22, 32), (chat_rect.x, y), (chat_rect.right, y))
         pygame.draw.rect(surf, theme.DIVIDER, chat_rect, 1)
 
-        # Prepare messages to be rendered
-        rendered_lines = []
-        max_text_w = chat_rect.width - 20
+        # Pre-calculate bubble layouts
+        bubbles = []
+        max_bubble_w = int(chat_rect.width * 0.75)
         
         for msg in self.messages:
-            user = f"<{msg['username']}>"
+            is_self = msg['username'] == self.username
             text = msg['message']
+            user = msg['username']
             
-            # Metadata line
-            rendered_lines.append(('meta', user))
+            wrapped = self._wrap_text(text, self.f_body, max_bubble_w - 40)
             
-            # Wrapped text lines
-            wrapped = self._wrap_text(text, self.f_body, max_text_w - 20)
-            for line in wrapped:
-                rendered_lines.append(('text', line))
+            # Calculate bubble dimensions
+            txt_surfs = [self.f_body.render(line, True, theme.FG) for line in wrapped]
+            b_w = max([s.get_width() for s in txt_surfs] + [0]) + 30
+            b_h = len(txt_surfs) * 24 + 20
             
-            # Spacer
-            rendered_lines.append(('spacer', ''))
+            bubbles.append({
+                'is_self': is_self,
+                'user': user,
+                'txt_surfs': txt_surfs,
+                'w': b_w,
+                'h': b_h
+            })
 
-        line_h = 24
-        total_h = len(rendered_lines) * line_h
+        total_h = sum(b['h'] + 15 for b in bubbles)
         self.max_scroll = max(0, total_h - chat_rect.height)
         self.scroll_y = min(self.scroll_y, self.max_scroll)
         
@@ -195,14 +205,38 @@ class ChatView:
         content_surf = pygame.Surface((chat_rect.width, total_h), pygame.SRCALPHA)
         
         curr_y = 0
-        for type, content in rendered_lines:
-            if type == 'meta':
-                s = self.f_meta.render(content, True, theme.ACCENT_DIM)
-                content_surf.blit(s, (10, curr_y + 4))
-            elif type == 'text':
-                s = self.f_body.render(content, True, theme.FG)
-                content_surf.blit(s, (25, curr_y))
-            curr_y += line_h
+        for b in bubbles:
+            is_self = b['is_self']
+            bx = chat_rect.width - b['w'] - 10 if is_self else 50
+            by = curr_y
+            
+            # Avatar
+            avatar_x = chat_rect.width - 35 if is_self else 10
+            avatar_rect = pygame.Rect(avatar_x, by, 30, 30)
+            pygame.draw.ellipse(content_surf, theme.ACCENT_DIM if not is_self else theme.SELECTION_BG, avatar_rect)
+            char = b['user'][0].upper()
+            av_txt = self.f_meta.render(char, True, theme.ACCENT if not is_self else theme.ACCENT)
+            content_surf.blit(av_txt, (avatar_rect.centerx - av_txt.get_width()//2, avatar_rect.centery - av_txt.get_height()//2))
+
+            # Bubble background
+            bubble_rect = pygame.Rect(bx, by, b['w'], b['h'])
+            bg_col = (30, 35, 50) if is_self else (22, 26, 40)
+            border_col = theme.ACCENT if is_self else theme.DIVIDER
+            pygame.draw.rect(content_surf, bg_col, bubble_rect, border_radius=10)
+            pygame.draw.rect(content_surf, border_col, bubble_rect, 1, border_radius=10)
+            
+            # Username (only for others)
+            if not is_self:
+                u_surf = self.f_meta.render(b['user'], True, theme.ACCENT_DIM)
+                content_surf.blit(u_surf, (bx, by - 16))
+            
+            # Render lines
+            ly = by + 10
+            for ts in b['txt_surfs']:
+                content_surf.blit(ts, (bx + 15, ly))
+                ly += 24
+                
+            curr_y += b['h'] + 20
 
         # Subsurface blit for scrolling
         if total_h > 0:
@@ -210,22 +244,27 @@ class ChatView:
             if view_rect.height > 0:
                 surf.blit(content_surf.subsurface(view_rect), chat_rect.topleft)
 
-        # Scrollbar
+        # Fancy Scrollbar
         if self.max_scroll > 0:
-            sb_w = 4
-            track_h = chat_rect.height
-            pygame.draw.rect(surf, theme.DIVIDER, (chat_rect.right - sb_w - 2, chat_rect.y, sb_w, track_h))
-            thumb_h = max(20, int(track_h * (chat_rect.height / total_h)))
-            thumb_y = chat_rect.y + int((self.scroll_y / self.max_scroll) * (track_h - thumb_h))
-            pygame.draw.rect(surf, theme.ACCENT_DIM, (chat_rect.right - sb_w - 2, thumb_y, sb_w, thumb_h))
+            sb_w = 6
+            track_h = chat_rect.height - 10
+            track_x = chat_rect.right - sb_w - 4
+            track_y = chat_rect.y + 5
+            pygame.draw.rect(surf, (15, 15, 25), (track_x, track_y, sb_w, track_h), border_radius=3)
+            
+            thumb_h = max(30, int(track_h * (chat_rect.height / total_h)))
+            thumb_y = track_y + int((self.scroll_y / self.max_scroll) * (track_h - thumb_h))
+            pygame.draw.rect(surf, theme.ACCENT, (track_x, thumb_y, sb_w, thumb_h), border_radius=3)
 
         if self.is_loading:
-            msg = self.f_body.render("Connecting...", True, theme.FG_DIM)
+            msg = self.f_body.render("Connecting to darksec.uk...", True, theme.FG_DIM)
             surf.blit(msg, (chat_rect.centerx - msg.get_width()//2, chat_rect.centery))
         elif self.error_msg and not self.messages:
             err = self.f_body.render(f"ERROR: {self.error_msg}", True, theme.ERR)
             surf.blit(err, (chat_rect.centerx - err.get_width()//2, chat_rect.centery))
 
         # Footer
-        hint = self.f_hint.render("A/START: Send  X/SEL: Handle  UP/DN: Scroll (LL/RR page)  B: Back", True, theme.FG_DIM)
-        surf.blit(hint, (theme.PADDING, theme.SCREEN_H - 30))
+        footer_y = theme.SCREEN_H - 35
+        pygame.draw.line(surf, theme.DIVIDER, (0, footer_y - 5), (theme.SCREEN_W, footer_y - 5))
+        hint = self.f_hint.render("A: SEND MESSAGE  X: SET HANDLE  UP/DN: SCROLL  B: BACK", True, theme.FG_DIM)
+        surf.blit(hint, (theme.SCREEN_W // 2 - hint.get_width() // 2, footer_y))
