@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 from bigbox import theme
 
-ASSET_PATH = Path("assets/monster.png")
+# Robust path relative to this file
+ASSET_PATH = Path(__file__).resolve().parents[2] / "assets" / "monster.png"
 
 class Monster:
     """A retro pixelated monster that lives in the status bar."""
@@ -42,22 +43,21 @@ class Monster:
                 full_sheet = pygame.image.load(str(ASSET_PATH)).convert_alpha()
                 
                 # --- High-Contrast B&W Processing ---
-                # We want a white sprite to match the BigB0X theme.
-                # Convert all non-transparent pixels to theme.FG (usually white)
-                # or a very light gray.
                 processed = pygame.Surface(full_sheet.get_size(), pygame.SRCALPHA)
                 for x in range(full_sheet.get_width()):
                     for y in range(full_sheet.get_height()):
-                        r, g, b, a = full_sheet.get_at((x, y))
-                        if a > 50: # If pixel is not transparent
-                            # Set it to white with the original alpha
-                            processed.set_at((x, y), (255, 255, 255, a))
+                        color = full_sheet.get_at((x, y))
+                        if color.a > 10:
+                            processed.set_at((x, y), (255, 255, 255, 255))
                 
                 # Sheet is 576x24, so 24 frames of 24x24
                 for i in range(24):
                     frame = pygame.Surface((self.frame_size, self.frame_size), pygame.SRCALPHA)
                     frame.blit(processed, (0, 0), (i * self.frame_size, 0, self.frame_size, self.frame_size))
                     self.frames.append(frame)
+                print(f"[monster] {len(self.frames)} frames loaded from {ASSET_PATH}")
+            else:
+                print(f"[monster] asset missing at {ASSET_PATH}")
         except Exception as e:
             print(f"[monster] failed to load assets: {e}")
 
@@ -85,7 +85,6 @@ class Monster:
 
         # Logic for transitions
         if self.current_state == "HAPPY" and self.frame_index == len(self.ANIMATIONS["HAPPY"]) - 1:
-            # Back to idle after one happy cycle
             self.set_state("IDLE")
         
         if self.current_state == "HURT" and self.frame_index == len(self.ANIMATIONS["HURT"]) - 1:
@@ -93,7 +92,6 @@ class Monster:
 
         # Movement logic
         if self.current_state == "IDLE":
-            # Occasionally walk around
             if random.random() < 0.01:
                 self.target_x = random.randint(100, theme.SCREEN_W - 100)
                 self.set_state("WALK")
@@ -113,7 +111,6 @@ class Monster:
         idx = anim_frames[self.frame_index % len(anim_frames)]
         frame = self.frames[idx]
         
-        # If walking left, flip frame
         if self.current_state == "WALK" and self.target_x < self.pos[0]:
             frame = pygame.transform.flip(frame, True, False)
 
