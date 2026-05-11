@@ -25,8 +25,8 @@ def build() -> Section:
     return Section(
         title="Waveform",
         icon="[~]",
-        icon_img=load_icon("recon"), # Fallback to recon icon
-        background_img=load_background("recon"),
+        icon_img=load_icon("waveform"),
+        background_img=load_background("waveform"),
         actions=[
             Action("ADS-B Tracker", _adsb, "live aircraft tracking (1090MHz)"),
             Action("Pager Sniffer", _pager, "POCSAG/FLEX decoding"),
