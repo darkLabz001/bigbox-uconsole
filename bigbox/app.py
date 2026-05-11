@@ -781,8 +781,6 @@ class App:
                 if bev.pressed:
                     self.monster.set_state("WALK")
 
-            self.monster.update(self)
-
             # 3. Render.
             now = time.time()
             if now - self._last_vol_enforce > 10:
@@ -832,7 +830,7 @@ class App:
                 else:
                     if self.show_status:
                         statusbar.render(screen, self)
-                    launcher.render(screen, body_font, title_font)
+                    launcher.render(screen, body_font, title_font, self)
 
                 # Cheat sheet overlay — drawn on top of everything
                 # except the screensaver, since the user can't see it

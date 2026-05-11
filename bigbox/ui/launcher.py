@@ -96,13 +96,16 @@ class Launcher:
                 
             return self.current_list.handle(ev)
 
-    def render(self, surf: pygame.Surface, font: pygame.font.Font, title_font: pygame.font.Font) -> None:
+    def render(self, surf: pygame.Surface, font: pygame.font.Font, title_font: pygame.font.Font, app: 'App' = None) -> None:
+        if app and hasattr(app, "monster"):
+            app.monster.update(app)
+        
         if self.state == "grid":
-            self._render_grid(surf, title_font)
+            self._render_grid(surf, title_font, app)
         else:
             self._render_section(surf, font, title_font)
 
-    def _render_grid(self, surf: pygame.Surface, title_font: pygame.font.Font) -> None:
+    def _render_grid(self, surf: pygame.Surface, title_font: pygame.font.Font, app: 'App' = None) -> None:
         if self._home_bg:
             surf.blit(self._home_bg, (0, 0))
         else:
@@ -194,6 +197,13 @@ class Launcher:
         
         sy += 12
         surf.blit(f_stat.render(f"{state.xp} XP", True, theme.FG_DIM), (15, sy))
+        
+        # --- Bitmon Companion (Under Rank) ---
+        if app and hasattr(app, "monster"):
+            # Set position to sidebar area under XP
+            app.monster.pos = [sidebar_w // 2, sy + 30]
+            app.monster.target_x = sidebar_w // 2 # Keep him in the sidebar
+            app.monster.render(surf)
 
         # 3. Grid Layout (Shifted Right)
         margin_x = sidebar_w + 30
