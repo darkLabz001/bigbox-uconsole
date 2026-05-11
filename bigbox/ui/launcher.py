@@ -200,9 +200,6 @@ class Launcher:
         
         # --- Bitmon Companion (Under Rank) ---
         if app and hasattr(app, "monster"):
-            # Set position to sidebar area under XP
-            app.monster.pos = [sidebar_w // 2, sy + 30]
-            app.monster.target_x = sidebar_w // 2 # Keep him in the sidebar
             app.monster.render(surf)
 
         # 3. Grid Layout (Shifted Right)
