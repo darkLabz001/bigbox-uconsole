@@ -117,6 +117,14 @@ class MapWidget:
         # Fill background
         pygame.draw.rect(surf, (20, 20, 25), clip_rect)
 
+        if self.lat == 0.0 and self.lon == 0.0:
+            f = pygame.font.Font(None, 24)
+            msg = f.render("WAITING FOR GPS FIX...", True, theme.FG_DIM)
+            surf.blit(msg, (cx + x_offset - msg.get_width() // 2, cy + y_offset - msg.get_height() // 2))
+            surf.set_clip(old_clip)
+            pygame.draw.rect(surf, theme.ACCENT, clip_rect, 1)
+            return
+
         for dx in range(-rx, rx + 1):
             for dy in range(-ry, ry + 1):
                 tx, ty = xtile + dx, ytile + dy
