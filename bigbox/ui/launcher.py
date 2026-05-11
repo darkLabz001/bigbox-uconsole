@@ -200,6 +200,8 @@ class Launcher:
         
         # --- Bitmon Companion (Under Rank) ---
         if app and hasattr(app, "monster"):
+            # Position tweak for the 96x96 demon
+            app.monster.pos = [sidebar_w // 2, sy + 60]
             app.monster.render(surf)
 
         # 3. Grid Layout (Shifted Right)

@@ -40,29 +40,28 @@ class Monster:
 
     def _load_assets(self):
         try:
-            # Fallback pathing ensures we find the asset
-            possible_paths = [
-                Path(__file__).resolve().parents[2] / "assets" / "monster.png",
-                Path("assets/monster.png").resolve(),
-                Path("/home/sinxneo/projects/bigbox/assets/monster.png")
-            ]
+            # Absolute root of the project
+            ROOT = Path(__file__).resolve().parents[2]
+            img_path = ROOT / "assets" / "monster.png"
             
-            img_path = None
-            for p in possible_paths:
-                if p.exists():
-                    img_path = p
-                    break
+            print(f"[monster] TARGET PATH: {img_path}")
+            print(f"[monster] EXISTS? {img_path.exists()}")
             
-            if img_path:
-                full_sheet = pygame.image.load(str(img_path)).convert_alpha()
+            if not img_path.exists():
+                # Try relative as fallback
+                img_path = Path("assets/monster.png").resolve()
+                print(f"[monster] FALLBACK PATH: {img_path}")
+            
+            if img_path.exists():
+                # Force load with absolute string
+                full_sheet = pygame.image.load(str(img_path.absolute())).convert_alpha()
+                print(f"[monster] LOAD SUCCESS: {full_sheet.get_size()}")
                 
                 # --- High-Contrast B&W Processing ---
-                # We'll create a striking pure-white silhouette with alpha preserved
-                # so the detailed shape of the demon stands out against the dark BG.
                 white_sheet = full_sheet.copy()
                 white_sheet.fill((255, 255, 255, 255), special_flags=pygame.BLEND_RGBA_MAX)
                 
-                # Extract frames (64x64 each, up to 64 frames total)
+                # Extract frames (64x64 each)
                 cols = full_sheet.get_width() // self.frame_size
                 rows = full_sheet.get_height() // self.frame_size
                 
@@ -70,16 +69,15 @@ class Monster:
                     for c in range(cols):
                         frame_surf = pygame.Surface((self.frame_size, self.frame_size), pygame.SRCALPHA)
                         frame_surf.blit(white_sheet, (0, 0), (c * self.frame_size, r * self.frame_size, self.frame_size, self.frame_size))
-                        
-                        # Scale up for maximum impact
                         scaled = pygame.transform.smoothscale(frame_surf, (self.display_size, self.display_size))
                         self.frames.append(scaled)
-                        
-                print(f"[monster] Success: {len(self.frames)} demon frames loaded from {img_path}")
+                print(f"[monster] {len(self.frames)} frames generated")
             else:
-                print(f"[monster] Error: Could not find assets/monster.png")
+                print(f"[monster] CRITICAL: monster.png not found anywhere")
         except Exception as e:
-            print(f"[monster] Load failure: {e}")
+            print(f"[monster] PYGAME LOAD ERROR: {e}")
+            import traceback
+            traceback.print_exc()
 
     def set_state(self, state: str):
         if state in self.ANIMATIONS and self.current_state != state:
