@@ -97,9 +97,6 @@ class Launcher:
             return self.current_list.handle(ev)
 
     def render(self, surf: pygame.Surface, font: pygame.font.Font, title_font: pygame.font.Font, app: 'App' = None) -> None:
-        if app and hasattr(app, "monster"):
-            app.monster.update(app)
-        
         if self.state == "grid":
             self._render_grid(surf, title_font, app)
         else:
