@@ -73,6 +73,10 @@ class WifiteView:
         self.opt_wpa = True
         self.opt_pmkid = True
         self.opt_pixie = True
+        self.opt_random_mac = True
+        self.opt_kill = True
+        self.opt_stealth = False
+        self.opt_attack_all = False
         self.opt_pow_threshold = 40
         self.opt_prioritize_alfa = True
         self.custom_args = ""
@@ -168,6 +172,10 @@ class WifiteView:
         if self.opt_wpa: args.append("--wpa")
         if self.opt_pmkid: args.append("--pmkid")
         if self.opt_pixie: args.append("--pixie")
+        if self.opt_random_mac: args.append("--random-mac")
+        if self.opt_kill: args.append("--kill")
+        if self.opt_stealth: args.append("--nodeauths")
+        if self.opt_attack_all: args.append("--all")
         if self.opt_pow_threshold > 0: args.extend(["-pow", str(self.opt_pow_threshold)])
         if self.custom_args: args.extend(self.custom_args.split())
         return args
@@ -247,13 +255,21 @@ class WifiteView:
                                 if not found:
                                     self.targets.append(WifiteTarget(tid, ssid.strip(), bssid.upper(), ch, enc, pwr, clients, False, [pwr]))
 
-                            if "captured" in stripped.lower() or "cracked" in stripped.lower():
-                                self._award_points(100)
-
                             if "select target" in stripped.lower() or "enter number" in stripped.lower():
                                 if self.phase == PHASE_SCANNING:
                                     self.phase = PHASE_TARGETS
                                     self.status_msg = "SPECTRUM_LOCKED"
+                                    
+                            if self.opt_attack_all and ("attacking" in stripped.lower() or "starting attack" in stripped.lower() or "capture" in stripped.lower()):
+                                if self.phase == PHASE_SCANNING:
+                                    self.phase = PHASE_ATTACKING
+                                    self.status_msg = "AUTO_ENGAGEMENT_ACTIVE"
+                                    
+                            if "cracked" in stripped.lower() or "captured" in stripped.lower() or "success" in stripped.lower():
+                                self._award_points(150)
+                                if "cracked" in stripped.lower():
+                                    self.status_msg = "CRITICAL_COMPROMISE_ACHIEVED"
+
                 except OSError: break
 
     def _send_input(self, text: str):
@@ -303,7 +319,7 @@ class WifiteView:
                 self.phase = PHASE_LOOT; self._refresh_loot(); self.status_msg = "ARCHIVE_SYNCED"
 
         elif self.phase == PHASE_CONFIG:
-            opts_count = 8
+            opts_count = 13
             if ev.button is Button.UP: self.config_cursor = (self.config_cursor - 1) % opts_count
             elif ev.button is Button.DOWN: self.config_cursor = (self.config_cursor + 1) % opts_count
             elif ev.button is Button.A: self._toggle_config(ctx)
@@ -338,6 +354,19 @@ class WifiteView:
             elif ev.button is Button.Y:
                 try: self.loot_list[self.loot_cursor].unlink(); self._refresh_loot(); self.status_msg = "PURGED"
                 except: pass
+            elif ev.button is Button.A:
+                path = self.loot_list[self.loot_cursor]
+                self.status_msg = "VERIFYING_CAPTURE..."
+                def _verify():
+                    try:
+                        proc = subprocess.run(["hcxpcapngtool", str(path)], capture_output=True, text=True, timeout=10)
+                        if "EAPOL" in proc.stdout or "PMKID" in proc.stdout:
+                            self.status_msg = "VERIFICATION_SUCCESS: HAS_KEY_MATERIAL"
+                        else:
+                            self.status_msg = "VERIFICATION_FAILED: NO_KEYS_FOUND"
+                    except Exception as e:
+                        self.status_msg = f"VERIFY_ERR: {e}"
+                threading.Thread(target=_verify, daemon=True).start()
 
     def _toggle_config(self, ctx: App):
         if self.config_cursor == 0:
@@ -352,9 +381,13 @@ class WifiteView:
         elif self.config_cursor == 4: self.opt_wpa = not self.opt_wpa
         elif self.config_cursor == 5: self.opt_pmkid = not self.opt_pmkid
         elif self.config_cursor == 6: self.opt_pixie = not self.opt_pixie
-        elif self.config_cursor == 7:
+        elif self.config_cursor == 7: self.opt_random_mac = not self.opt_random_mac
+        elif self.config_cursor == 8: self.opt_kill = not self.opt_kill
+        elif self.config_cursor == 9: self.opt_stealth = not self.opt_stealth
+        elif self.config_cursor == 10: self.opt_attack_all = not self.opt_attack_all
+        elif self.config_cursor == 11:
             ctx.get_input("MIN_POWER_DB", lambda v: setattr(self, "opt_pow_threshold", int(v or 0)), str(self.opt_pow_threshold))
-        elif self.config_cursor == 8:
+        elif self.config_cursor == 12:
             ctx.get_input("CUSTOM_PARAMS", lambda v: setattr(self, "custom_args", v or ""), self.custom_args)
 
     def render(self, surf: pygame.Surface) -> None:
@@ -386,7 +419,7 @@ class WifiteView:
         if self.phase == PHASE_CONFIG: return "UP/DN: NAV  A: TOGGLE  START: DONE"
         if self.phase == PHASE_SCANNING: return "A/START: LOCK_TARGETS  B: ABORT"
         if self.phase == PHASE_TARGETS: return "UP/DN: SELECT  A: ENGAGE  B: ABORT"
-        if self.phase == PHASE_LOOT: return "X: SHARE  Y: PURGE  B: RETURN"
+        if self.phase == PHASE_LOOT: return "A: VERIFY  X: SHARE  Y: PURGE  B: RETURN"
         return "B: BACK"
 
     def _draw_hud_frame(self, surf: pygame.Surface):
@@ -428,11 +461,21 @@ class WifiteView:
             ("ATTACK_WPA", self.opt_wpa),
             ("CAPTURE_PMKID", self.opt_pmkid),
             ("WPS_PIXIE_DUST", self.opt_pixie),
+            ("RANDOM_MAC", self.opt_random_mac),
+            ("KILL_CONFLICTS", self.opt_kill),
+            ("STEALTH_MODE", self.opt_stealth),
+            ("ATTACK_ALL_AUTO", self.opt_attack_all),
             ("MIN_POWER_DB", f"-{self.opt_pow_threshold}"),
             ("CUSTOM_PARAMS", self.custom_args or "NONE")
         ]
-        for i, (lbl, val) in enumerate(opts):
-            sel = i == self.config_cursor
+        
+        # Scroll the options if there are too many to fit on screen
+        max_visible = 9
+        scroll = max(0, min(self.config_cursor - max_visible // 2, len(opts) - max_visible))
+        
+        for i, (lbl, val) in enumerate(opts[scroll:scroll+max_visible]):
+            actual_idx = i + scroll
+            sel = actual_idx == self.config_cursor
             rect = pygame.Rect(50, y + 40 + i*35, 450, 30)
             if sel: pygame.draw.rect(surf, theme.SELECTION_BG, rect, border_radius=2); pygame.draw.rect(surf, theme.ACCENT, rect, 1, border_radius=2)
             surf.blit(self.f_main.render(f"{lbl}:", True, theme.FG_DIM), (70, rect.y + 5))
@@ -467,17 +510,27 @@ class WifiteView:
             surf.blit(self.f_small.render(str(t.clients), True, theme.FG), (tx, ry))
 
     def _render_attacking(self, surf: pygame.Surface, head_h: int):
-        t = self.targets[self.target_cursor]; info_rect = pygame.Rect(20, head_h + 10, theme.SCREEN_W - 40, 80)
+        info_rect = pygame.Rect(20, head_h + 10, theme.SCREEN_W - 40, 80)
         pygame.draw.rect(surf, theme.BG_ALT, info_rect, border_radius=4); pygame.draw.rect(surf, theme.ACCENT, info_rect, 1, border_radius=4)
-        surf.blit(self.f_bold.render(f"ENGAGEMENT_TARGET: {t.ssid or t.bssid}", True, theme.ACCENT), (info_rect.x+20, info_rect.y+15))
-        surf.blit(self.f_main.render(f"BSSID: {t.bssid}  |  CHAN: {t.channel}  |  ENCR: {t.encryption}  |  SIGNAL: {t.power}dB", True, theme.FG), (info_rect.x+20, info_rect.y+45))
-        osc_rect = pygame.Rect(20, info_rect.bottom + 15, 300, 120); pygame.draw.rect(surf, (5, 10, 8), osc_rect); pygame.draw.rect(surf, theme.DIVIDER, osc_rect, 1)
-        if len(t.power_history) > 1:
-            pts = [(osc_rect.x + (i * (osc_rect.width / 30)), osc_rect.bottom - int((p + 100) * (osc_rect.height / 80))) for i, p in enumerate(t.power_history)]
-            pygame.draw.lines(surf, theme.ACCENT, False, [(p[0], max(osc_rect.y+2, min(osc_rect.bottom-2, p[1]))) for p in pts], 2)
-        log_rect = pygame.Rect(20, osc_rect.bottom + 15, theme.SCREEN_W - 40, theme.SCREEN_H - osc_rect.bottom - 60)
+        
+        if self.targets and self.target_cursor < len(self.targets):
+            t = self.targets[self.target_cursor]
+            surf.blit(self.f_bold.render(f"ENGAGEMENT_TARGET: {t.ssid or t.bssid}", True, theme.ACCENT), (info_rect.x+20, info_rect.y+15))
+            surf.blit(self.f_main.render(f"BSSID: {t.bssid}  |  CHAN: {t.channel}  |  ENCR: {t.encryption}  |  SIGNAL: {t.power}dB", True, theme.FG), (info_rect.x+20, info_rect.y+45))
+            osc_rect = pygame.Rect(20, info_rect.bottom + 15, 300, 120); pygame.draw.rect(surf, (5, 10, 8), osc_rect); pygame.draw.rect(surf, theme.DIVIDER, osc_rect, 1)
+            if len(t.power_history) > 1:
+                pts = [(osc_rect.x + (i * (osc_rect.width / 30)), osc_rect.bottom - int((p + 100) * (osc_rect.height / 80))) for i, p in enumerate(t.power_history)]
+                pygame.draw.lines(surf, theme.ACCENT, False, [(p[0], max(osc_rect.y+2, min(osc_rect.bottom-2, p[1]))) for p in pts], 2)
+            log_rect = pygame.Rect(20, osc_rect.bottom + 15, theme.SCREEN_W - 40, theme.SCREEN_H - osc_rect.bottom - 60)
+        else:
+            surf.blit(self.f_bold.render("AUTO_ENGAGEMENT_ACTIVE: MULTIPLE_TARGETS", True, theme.ACCENT), (info_rect.x+20, info_rect.y+15))
+            surf.blit(self.f_main.render("BSSID: MULTIPLE  |  CHAN: SCANNING  |  MODE: AUTONOMOUS", True, theme.FG), (info_rect.x+20, info_rect.y+45))
+            log_rect = pygame.Rect(20, info_rect.bottom + 15, theme.SCREEN_W - 40, theme.SCREEN_H - info_rect.bottom - 60)
+            
         pygame.draw.rect(surf, (5, 6, 10), log_rect, border_radius=2); pygame.draw.rect(surf, theme.DIVIDER, log_rect, 1)
-        for i, line in enumerate(list(self.history)[-8:]): surf.blit(self.f_tiny.render(f"> {line[:110]}", True, theme.FG), (log_rect.x+10, log_rect.y+8+i*18))
+        visible_lines = (log_rect.height - 16) // 18
+        for i, line in enumerate(list(self.history)[-visible_lines:]): 
+            surf.blit(self.f_tiny.render(f"> {line[:110]}", True, theme.FG), (log_rect.x+10, log_rect.y+8+i*18))
 
     def _render_loot(self, surf: pygame.Surface, head_h: int):
         box = pygame.Rect(20, head_h + 10, 760, theme.SCREEN_H - head_h - 60)
