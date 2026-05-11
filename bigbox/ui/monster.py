@@ -105,6 +105,8 @@ class Monster:
 
     def render(self, surf: pygame.Surface):
         if not self.frames:
+            # Fallback: draw a small white square if frames failed to load
+            pygame.draw.rect(surf, (255, 255, 255), (self.pos[0] - 4, self.pos[1] + 8, 8, 8))
             return
 
         anim_frames = self.ANIMATIONS.get(self.current_state, self.ANIMATIONS["IDLE"])
@@ -114,4 +116,5 @@ class Monster:
         if self.current_state == "WALK" and self.target_x < self.pos[0]:
             frame = pygame.transform.flip(frame, True, False)
 
-        surf.blit(frame, (self.pos[0] - 12, self.pos[1]))
+        # Draw slightly offset from absolute center to avoid ticker overlap
+        surf.blit(frame, (self.pos[0] - 40, self.pos[1]))
