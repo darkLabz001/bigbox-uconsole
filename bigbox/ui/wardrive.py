@@ -154,11 +154,14 @@ def _parse_bluetoothctl_devices(text: str) -> list[_Observation]:
     return out
 
 
+from bigbox.ui.map import MapWidget
+
 class WardriveView:
     def __init__(self) -> None:
         self.dismissed = False
         self.phase = PHASE_LANDING
         self.status_msg = "Initialising..."
+        self.show_map = True  # Toggle between map and stats
 
         # Recover from previous tools (monitor mode, btmon, etc.)
         hardware.ensure_wifi_managed()
@@ -184,6 +187,9 @@ class WardriveView:
         # GPS
         self.gps = GPSReader()
         self.gps.start()
+
+        # Map
+        self.map = MapWidget(theme.SCREEN_W - 2 * theme.PADDING, 240)
 
         # Capture state
         self.observed: dict[str, _Observation] = {}  # mac -> obs
