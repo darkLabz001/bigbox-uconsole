@@ -169,21 +169,38 @@ class WardriveView:
 
         # Split interfaces: one for scanning, one for capture (if available)
         all_ifaces = hardware.list_wifi_clients()
-        if not all_ifaces:
-            all_ifaces = ["wlan0"]
+        internet_iface = hardware.get_internet_iface()
+        alfa_ifaces = hardware.list_alfa_ifaces()
         
-        self.ifaces = all_ifaces[:1]  # Default to one for scanning
-        self.cap_iface_raw: str | None = None
+        scan_ifaces = []
+        cap_iface = None
+        
+        if len(all_ifaces) >= 2:
+            # We have at least two. Use one for scanning, one for monitor-mode capture.
+            # Prefer Alfa for capture (monitor mode) if it's not the internet iface.
+            potential_caps = [i for i in alfa_ifaces if i != internet_iface]
+            if not potential_caps:
+                # If no Alfa is available (or it IS the internet iface), use any non-internet iface.
+                potential_caps = [i for i in all_ifaces if i != internet_iface]
+            
+            if potential_caps:
+                cap_iface = potential_caps[0]
+                # Use all other interfaces for scanning. 
+                # Scanning in managed mode (iw scan) is generally safe on the internet interface.
+                scan_ifaces = [i for i in all_ifaces if i != cap_iface]
+            else:
+                # Everything is internet? Unlikely, but fallback to original logic.
+                cap_iface = all_ifaces[1]
+                scan_ifaces = [all_ifaces[0]]
+        else:
+            # Only one interface available.
+            scan_ifaces = all_ifaces
+            cap_iface = None
+        
+        self.ifaces = scan_ifaces
+        self.cap_iface_raw = cap_iface
         self.mon_iface: str | None = None
         
-        if len(all_ifaces) > 1:
-            # We have at least two. Use the rest for scanning?
-            # Or use one for scanning and one for capture.
-            # Usually wlan1 (USB) is better for capture.
-            if len(all_ifaces) >= 2:
-                self.cap_iface_raw = all_ifaces[1]
-                self.ifaces = [all_ifaces[0]]
-            
         # GPS
         self.gps = GPSReader()
         self.gps.start()
@@ -200,6 +217,22 @@ class WardriveView:
         self._last_geiger = 0.0
         self._geiger_sound: Optional[pygame.mixer.Sound] = None
         self._init_geiger()
+
+        self._csv_path: Path | None = None
+        self._csv_handle = None
+        self._capture_started: float = 0.0
+        self._wifi_scan_count = 0
+        self._bt_scan_count = 0
+
+        # Scan threads
+        self._stop = False
+        self._wifi_threads: list[threading.Thread] = []
+        self._bt_thread: threading.Thread | None = None
+        self._bt_proc: subprocess.Popen | None = None  # the persistent `scan le on`
+        self._hcxdumptool: subprocess.Popen | None = None
+
+        # Result
+        self.result_msg = ""
 
     def _init_geiger(self):
         try:
@@ -233,22 +266,6 @@ class WardriveView:
         if time.time() - self._last_geiger > interval:
             self._last_geiger = time.time()
             self._geiger_sound.play()
-        
-        self._csv_path: Path | None = None
-        self._csv_handle = None
-        self._capture_started: float = 0.0
-        self._wifi_scan_count = 0
-        self._bt_scan_count = 0
-
-        # Scan threads
-        self._stop = False
-        self._wifi_threads: list[threading.Thread] = []
-        self._bt_thread: threading.Thread | None = None
-        self._bt_proc: subprocess.Popen | None = None  # the persistent `scan le on`
-        self._hcxdumptool: subprocess.Popen | None = None
-
-        # Result
-        self.result_msg = ""
 
     # ---------- session lifecycle ----------
     def _start_capture(self) -> None:
@@ -728,11 +745,19 @@ class WardriveView:
                         head_h + 140))
         
         ifaces_str = ", ".join(self.ifaces)
+        cap_str = self.cap_iface_raw or "None"
         bt_label = self.bt_hci or "none"
         if self.bt_hci and hardware.is_usb_bluetooth(self.bt_hci):
             bt_label += " (USB)"
+        
+        internet_iface = hardware.get_internet_iface()
+        
+        scan_info = f"Scan: {ifaces_str}"
+        if internet_iface in self.ifaces:
+            scan_info += " (Internet)"
+            
         sub2 = f_med.render(
-            f"Wi-Fi: {ifaces_str}   BT: {bt_label}   Output: loot/wardrive/",
+            f"{scan_info}   Capture: {cap_str}   BT: {bt_label}",
             True, theme.FG_DIM)
         surf.blit(sub2, (theme.SCREEN_W // 2 - sub2.get_width() // 2,
                          head_h + 180))

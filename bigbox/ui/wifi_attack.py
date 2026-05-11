@@ -66,34 +66,11 @@ class Client:
     probes: str = ""
 
 
-@dataclass
-class _Iface:
-    name: str
-    is_monitor: bool = False
+_Iface = hardware.WifiInterface
 
 
 def _list_wlan_ifaces() -> list[_Iface]:
-    try:
-        out = subprocess.check_output(["iw", "dev"], text=True, timeout=3)
-    except Exception:
-        return []
-    ifaces: list[_Iface] = []
-    cur_name: str | None = None
-    cur_type: str = ""
-    for line in out.splitlines():
-        m = re.match(r"\s*Interface\s+(\S+)", line)
-        if m:
-            if cur_name is not None:
-                ifaces.append(_Iface(cur_name, cur_type == "monitor"))
-            cur_name = m.group(1)
-            cur_type = ""
-            continue
-        m = re.match(r"\s*type\s+(\S+)", line)
-        if m and cur_name is not None:
-            cur_type = m.group(1)
-    if cur_name is not None:
-        ifaces.append(_Iface(cur_name, cur_type == "monitor"))
-    return ifaces
+    return hardware.list_wifi_interfaces()
 
 
 def read_airodump_csv(path: Path) -> tuple[list[AP], list[Client]]:
@@ -586,7 +563,14 @@ class WifiAttackView:
                 pygame.draw.rect(surf, theme.SELECTION_BG, rect, border_radius=5)
                 pygame.draw.rect(surf, theme.ACCENT, rect, 2, border_radius=5)
             color = theme.ACCENT if sel else theme.FG
-            label = f.render(it.name, True, color)
+            
+            label_text = it.name
+            if it.vendor:
+                label_text += f" [{it.vendor}]"
+            if it.is_internet:
+                label_text += " (INTERNET)"
+            
+            label = f.render(label_text, True, color)
             surf.blit(label, (rect.x + 14, rect.y + 8))
             tag = "monitor" if it.is_monitor else "managed"
             tag_surf = f_small.render(tag, True, theme.FG_DIM)

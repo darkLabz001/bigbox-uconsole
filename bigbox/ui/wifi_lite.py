@@ -91,13 +91,15 @@ class _MonitorModeView:
         # Filter the picker to interfaces that actually support monitor
         # mode. Pi 4's onboard wlan0 (BCM43455 sans nexmon) doesn't —
         # showing it as an option just sets the user up for failure.
-        monitor_caps = hardware.list_monitor_capable_clients()
+        monitor_caps = hardware.list_monitor_capable_interfaces()
         if monitor_caps:
             self.ifaces = monitor_caps
         else:
             # No monitor-capable adapter visible — show whatever's there
             # so the user can see the picker isn't broken, plus a hint.
-            self.ifaces = hardware.list_wifi_clients() or ["wlan0"]
+            # Convert str list to WifiInterface list for consistency
+            clients = hardware.list_wifi_clients() or ["wlan0"]
+            self.ifaces = [hardware.WifiInterface(c) for c in clients]
             self.status_msg = ("no monitor-capable adapter detected — "
                                "plug in an Alfa or similar")
         self.iface_cursor = 0
@@ -150,7 +152,7 @@ class _MonitorModeView:
             elif ev.button is Button.DOWN:
                 self.iface_cursor = (self.iface_cursor + 1) % len(self.ifaces)
             elif ev.button is Button.A:
-                self.selected_iface = self.ifaces[self.iface_cursor]
+                self.selected_iface = self.ifaces[self.iface_cursor].name
                 self.phase = PHASE_ENABLING
                 self.status_msg = f"airmon-ng start {self.selected_iface}..."
                 threading.Thread(target=self._enable_then_run,

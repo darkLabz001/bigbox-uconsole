@@ -378,7 +378,8 @@ class WifiMultiToolView:
         surf.blit(status_font.render(self.status_msg, True, theme.FG_DIM), (theme.PADDING, theme.SCREEN_H - 25))
 
         if self.phase == PHASE_PICK_IFACE:
-            self._render_list(surf, "Select Interface", [i.name for i in self.ifaces], self.iface_cursor, head_h)
+            labels = [f"{i.name} [{i.vendor}]{' (INTERNET)' if i.is_internet else ''}" for i in self.ifaces]
+            self._render_list(surf, "Select Interface", labels, self.iface_cursor, head_h)
         elif self.phase == PHASE_SCAN_APS:
             self._render_aps(surf, head_h)
         elif self.phase == PHASE_SELECT_ATTACK:

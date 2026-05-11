@@ -249,7 +249,23 @@ def iface_supports_monitor(iface: str) -> bool:
     return False
 
 
+def get_internet_iface() -> str | None:
+    """Returns the name of the interface used for the default gateway (internet)."""
+    rc, out = _run(["ip", "route", "show", "default"], timeout=2)
+    if rc == 0:
+        m = re.search(r"dev\s+(\S+)", out)
+        if m:
+            return m.group(1)
+    return None
+
+
+def list_monitor_capable_interfaces() -> list[WifiInterface]:
+    """Subset of list_wifi_interfaces() filtered to monitor-mode-capable ifaces."""
+    return [i for i in list_wifi_interfaces() if iface_supports_monitor(i.name)]
+
+
 def list_monitor_capable_clients() -> list[str]:
+
     """Subset of list_wifi_clients() filtered to monitor-mode-capable ifaces.
 
     Used by views that put the iface into monitor mode so the picker
@@ -347,6 +363,46 @@ def list_alfa_ifaces() -> list[str]:
         except: pass
 
     return alfa_ifaces
+
+
+from dataclasses import dataclass, field
+
+@dataclass
+class WifiInterface:
+    name: str
+    is_monitor: bool = False
+    is_internet: bool = False
+    vendor: str = ""
+
+
+def list_wifi_interfaces() -> list[WifiInterface]:
+    """Detailed list of wlan interfaces with metadata."""
+    rc, out = _run(["iw", "dev"], timeout=3)
+    if rc != 0:
+        return []
+    
+    internet_iface = get_internet_iface()
+    alfa_ifaces = list_alfa_ifaces()
+    
+    ifaces: list[WifiInterface] = []
+    cur_name: str | None = None
+    cur_type: str = ""
+    for line in out.splitlines():
+        m = re.match(r"\s*Interface\s+(\S+)", line)
+        if m:
+            if cur_name is not None:
+                vendor = "Alfa/USB" if cur_name in alfa_ifaces else "Internal"
+                ifaces.append(WifiInterface(cur_name, cur_type == "monitor", cur_name == internet_iface, vendor))
+            cur_name = m.group(1)
+            cur_type = ""
+            continue
+        m = re.match(r"\s*type\s+(\S+)", line)
+        if m and cur_name is not None:
+            cur_type = m.group(1)
+    if cur_name is not None:
+        vendor = "Alfa/USB" if cur_name in alfa_ifaces else "Internal"
+        ifaces.append(WifiInterface(cur_name, cur_type == "monitor", cur_name == internet_iface, vendor))
+    return ifaces
 
 
 def list_wifi_clients() -> list[str]:
