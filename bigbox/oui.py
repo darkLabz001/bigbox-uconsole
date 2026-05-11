@@ -102,14 +102,18 @@ _CLASS_RULES_SORTED = tuple(
 )
 
 
-_DB: dict[str, str] | None = None
+_DB: dict[str, str] = {}
+_LOADED = False
+_CACHE: dict[str, tuple[str, str]] = {}
 
 
-def _load_db() -> dict[str, str]:
-    global _DB
-    if _DB is not None:
-        return _DB
-    db: dict[str, str] = {}
+def _load_db():
+    global _DB, _LOADED
+    if _LOADED:
+        return
+    
+    # Process all available databases to build the most complete picture.
+    # Pi 4 has plenty of RAM to hold the full consolidated dictionary.
     for path in _DB_PATHS:
         if not os.path.exists(path):
             continue
@@ -123,27 +127,22 @@ def _load_db() -> dict[str, str]:
                     if len(parts) != 2:
                         continue
                     prefix, rest = parts
-                    # Wireshark/IEEE form may use colons or dashes; strip.
-                    prefix = prefix.replace(":", "").replace("-", "")
-                    # Subnet-prefix forms like "0050C2/24" — strip mask;
-                    # only the leading 24-bit OUI is indexed.
+                    # Standardize prefix (hex string, no separators)
+                    prefix = prefix.replace(":", "").replace("-", "").replace(".", "")
                     if "/" in prefix:
                         prefix = prefix.split("/", 1)[0]
                     if len(prefix) < 6:
                         continue
                     prefix = prefix[:6].upper()
-                    # First field of `rest` (split on tab) is the short
-                    # vendor name. Wireshark format puts a long form
-                    # after a tab; keep just the short one.
+                    
+                    # Wireshark format has short name followed by tab and long name
                     vendor = rest.split("\t", 1)[0].strip()
-                    if prefix and vendor and prefix not in db:
-                        db[prefix] = vendor
-            if db:
-                break
+                    
+                    if prefix and vendor and prefix not in _DB:
+                        _DB[prefix] = vendor
         except Exception:
             continue
-    _DB = db
-    return _DB
+    _LOADED = True
 
 
 def is_randomized(mac: str) -> bool:
@@ -175,12 +174,26 @@ def lookup(mac: str) -> tuple[str, str]:
     """
     if not mac:
         return ("", "")
+    
+    # Fast path: cache lookups for frequently seen MACs
+    if mac in _CACHE:
+        return _CACHE[mac]
+
     if is_randomized(mac):
-        return ("Randomized", "privacy MAC")
+        res = ("Randomized", "privacy MAC")
+        _CACHE[mac] = res
+        return res
+
     prefix = mac.replace(":", "").replace("-", "").upper()[:6]
     if len(prefix) < 6:
         return ("", "")
-    vendor = _load_db().get(prefix, "")
+    
+    _load_db()
+    vendor = _DB.get(prefix, "")
     if not vendor:
-        return ("Unknown", "")
-    return (vendor, classify(vendor))
+        res = ("Unknown", "")
+    else:
+        res = (vendor, classify(vendor))
+    
+    _CACHE[mac] = res
+    return res

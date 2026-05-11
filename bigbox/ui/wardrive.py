@@ -217,6 +217,10 @@ class WardriveView:
         self._last_geiger = 0.0
         self._geiger_sound: Optional[pygame.mixer.Sound] = None
         self._init_geiger()
+        
+        # Audio worker thread
+        self._audio_queue = []
+        threading.Thread(target=self._audio_worker, daemon=True).start()
 
         self._csv_path: Path | None = None
         self._csv_handle = None
@@ -251,21 +255,51 @@ class WardriveView:
         except Exception:
             pass
 
+    def _audio_worker(self):
+        """Dedicated thread for playing discovery sounds to prevent main loop stutter."""
+        while not self.dismissed:
+            if self._audio_queue:
+                sound_type = self._audio_queue.pop(0)
+                if sound_type == "beep":
+                    self._do_play_beep()
+                elif sound_type == "geiger":
+                    if self._geiger_sound:
+                        self._geiger_sound.play()
+            time.sleep(0.01)
+
     def _play_geiger(self, npm: float):
         if not self._geiger_sound: return
         if npm < 0.1: return
         
-        # Interval between clicks (seconds)
-        # npm=10 -> 6s interval
-        # npm=100 -> 0.6s interval
-        # npm=600 -> 0.1s interval (crackle)
         interval = 60.0 / max(1.0, npm)
-        # Max interval of 2 seconds for feedback even in slow areas
         interval = min(2.0, interval)
         
         if time.time() - self._last_geiger > interval:
             self._last_geiger = time.time()
-            self._geiger_sound.play()
+            self._audio_queue.append("geiger")
+
+    def _play_beep(self) -> None:
+        self._audio_queue.append("beep")
+
+    def _do_play_beep(self) -> None:
+        """Internal blip playback."""
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            import array
+            sample_rate = 44100
+            freq = 1200
+            duration = 0.05
+            n_samples = int(sample_rate * duration)
+            buf = array.array('h', [0] * n_samples)
+            for i in range(n_samples):
+                t = i / sample_rate
+                buf[i] = 8000 if (int(t * freq * 2) % 2) else -8000
+            sound = pygame.mixer.Sound(buffer=buf)
+            sound.set_volume(0.2)
+            sound.play()
+        except Exception:
+            pass
 
     # ---------- session lifecycle ----------
     def _start_capture(self) -> None:
@@ -441,27 +475,6 @@ class WardriveView:
         self.dismissed = True
 
     # ---------- record an observation ----------
-    def _play_beep(self) -> None:
-        """Short discovery blip."""
-        try:
-            if not pygame.mixer.get_init():
-                pygame.mixer.init()
-            import array
-            sample_rate = 44100
-            freq = 1200
-            duration = 0.05
-            n_samples = int(sample_rate * duration)
-            buf = array.array('h', [0] * n_samples)
-            for i in range(n_samples):
-                t = i / sample_rate
-                # Square wave
-                buf[i] = 8000 if (int(t * freq * 2) % 2) else -8000
-            sound = pygame.mixer.Sound(buffer=buf)
-            sound.set_volume(0.2)
-            sound.play()
-        except Exception:
-            pass
-
     def _record(self, obs: _Observation) -> None:
         with self._lock:
             if obs.mac in self.observed:
@@ -491,6 +504,7 @@ class WardriveView:
             achievements.report_node(is_bt=(obs.type == "BT"))
 
         self._play_beep()
+        self.map.add_discovery_ring(obs.first_lat, obs.first_lon)
 
         if self._csv_handle:
             self._csv_handle.write(wigle.wigle_csv_row(
