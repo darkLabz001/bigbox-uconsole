@@ -155,14 +155,20 @@ class SubdomainEnumView:
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
         def probe(s: str) -> tuple[str, str]:
+            import socket
+            try:
+                ip = socket.gethostbyname(s)
+            except Exception:
+                return s, "nxdomain"
+                
             for scheme in ("https", "http"):
                 try:
                     r = requests.head(f"{scheme}://{s}", timeout=4,
                                       allow_redirects=True)
-                    return s, f"{scheme} {r.status_code}"
+                    return s, f"{ip} [{scheme} {r.status_code}]"
                 except Exception:
                     continue
-            return s, "down"
+            return s, f"{ip} [down]"
 
         index = {r["sub"]: r for r in self.results}
         with ThreadPoolExecutor(max_workers=12) as pool:
@@ -280,11 +286,16 @@ class SubdomainEnumView:
                 items = sorted(self.results, key=lambda r: r["sub"])
                 items = items[self.scroll:self.scroll + visible]
                 for r in items:
-                    color = (theme.ACCENT if r["status"].startswith("https 2")
-                             or r["status"].startswith("http 2")
-                             else theme.FG_DIM)
+                    color = theme.FG_DIM
+                    if "http 2" in r["status"] or "https 2" in r["status"] or "http 3" in r["status"] or "https 3" in r["status"]:
+                        color = theme.ACCENT
+                    elif r["status"] == "nxdomain":
+                        color = (80, 80, 80)
+                    elif "[down]" in r["status"]:
+                        color = (150, 100, 100)
+                        
                     line = f"{r['sub']:48}  {r['status']}"
-                    ls = self.small_font.render(line[:80], True, color)
+                    ls = self.small_font.render(line[:100], True, color)
                     surf.blit(ls, (body.x + 16, row_y))
                     row_y += row_h
                     if row_y > body.bottom - 20:
