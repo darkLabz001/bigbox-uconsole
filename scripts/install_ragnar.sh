@@ -2,7 +2,8 @@ cat > install_ragnar_kali_pi.sh << 'EOF'
 #!/bin/bash
 set -e
 
-echo "=== Ragnar Headless Kali Raspberry Pi Installer ==="
+echo "STATUS: Initializing Ragnar install..."
+echo "PROGRESS: 5"
 
 ORIGINAL_REPO="https://github.com/PierreGode/Ragnar.git"
 HEADLESS_REPO="https://github.com/DezusAZ/hbp0_ragnar.git"
@@ -10,7 +11,8 @@ INSTALL_DIR="/opt/ragnar"
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[*] Installing system dependencies..."
+echo "STATUS: Installing system dependencies..."
+echo "PROGRESS: 10"
 apt update
 apt install -y \
   git curl wget ca-certificates \
@@ -24,24 +26,28 @@ apt install -y \
   network-manager wireless-tools iw rfkill iproute2 net-tools \
   nmap arp-scan traceroute dnsutils iputils-ping sqlite3
 
-echo "[*] Preparing temp dirs so pip does not fill /tmp..."
+echo "STATUS: Preparing temp dirs..."
+echo "PROGRESS: 25"
 mkdir -p /root/pip-tmp /root/pip-cache
 export TMPDIR=/root/pip-tmp
 export TEMP=/root/pip-tmp
 export TMP=/root/pip-tmp
 export PIP_CACHE_DIR=/root/pip-cache
 
-echo "[*] Removing old Ragnar install backup if needed..."
+echo "STATUS: Removing old Ragnar install backup..."
+echo "PROGRESS: 30"
 if [ -d "$INSTALL_DIR" ]; then
   BACKUP="/root/Ragnar.backup.$(date +%Y%m%d-%H%M%S)"
   echo "[*] Existing Ragnar found. Moving to $BACKUP"
   mv "$INSTALL_DIR" "$BACKUP"
 fi
 
-echo "[*] Cloning original Ragnar..."
+echo "STATUS: Cloning Ragnar repository..."
+echo "PROGRESS: 40"
 git clone "$ORIGINAL_REPO" "$INSTALL_DIR"
 
-echo "[*] Cloning headless Ragnar repo..."
+echo "STATUS: Applying headless modifications..."
+echo "PROGRESS: 50"
 rm -rf /tmp/hbp0_ragnar
 git clone "$HEADLESS_REPO" /tmp/hbp0_ragnar
 
@@ -61,21 +67,24 @@ fi
 
 chmod +x Ragnar.py
 
-echo "[*] Creating required folders..."
+echo "STATUS: Creating required folders..."
+echo "PROGRESS: 60"
 mkdir -p data/logs data/output data/networks/default/db config var backup backup/backups backup/uploads
 chmod -R 777 data/logs || true
 
 echo "[*] Creating blank .env if missing..."
 touch .env
 
-echo "[*] Rebuilding Python venv with system packages..."
+echo "STATUS: Rebuilding Python venv..."
+echo "PROGRESS: 70"
 rm -rf venv
 python3 -m venv --system-site-packages venv
 source venv/bin/activate
 
 python -m pip install --upgrade pip setuptools wheel
 
-echo "[*] Installing Python dependencies safely..."
+echo "STATUS: Installing Python dependencies..."
+echo "PROGRESS: 80"
 pip install --no-cache-dir \
   rich>=13.0.0 \
   netifaces==0.11.0 \
@@ -101,11 +110,13 @@ pip install --no-cache-dir \
   luma.led_matrix>=1.3.0 \
   luma.core>=2.4.0 || true
 
-echo "[*] Enabling Bluetooth service..."
+echo "STATUS: Enabling Bluetooth service..."
+echo "PROGRESS: 90"
 systemctl enable bluetooth || true
 systemctl start bluetooth || true
 
-echo "[*] Running import check..."
+echo "STATUS: Running import check..."
+echo "PROGRESS: 95"
 python3 - << 'PY'
 import importlib
 
@@ -159,6 +170,9 @@ if failed:
 
 print("\nAll required Ragnar headless imports passed.")
 PY
+
+echo "PROGRESS: 100"
+echo "STATUS: Ragnar Installed Successfully"
 
 echo
 echo "=== Ragnar install complete ==="

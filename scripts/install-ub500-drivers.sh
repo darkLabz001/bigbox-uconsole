@@ -10,10 +10,14 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+echo "STATUS: Initializing UB500 driver install..."
+echo "PROGRESS: 10"
+
 FW_DIR="/lib/firmware/rtl_bt"
 mkdir -p "$FW_DIR"
 
-echo "==> downloading RTL8761B firmware for UB500"
+echo "STATUS: Downloading RTL8761B firmware..."
+echo "PROGRESS: 30"
 
 # Official linux-firmware mirrors
 BASE_URL="https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/plain/rtl_bt"
@@ -28,9 +32,10 @@ for f in "${files[@]}"; do
     echo "    fetching $f..."
     curl -sSL "$BASE_URL/$f" -o "$FW_DIR/$f"
 done
+echo "PROGRESS: 70"
 
-echo "==> firmware installed to $FW_DIR"
-echo "==> reloading bluetooth module"
+echo "STATUS: Reloading bluetooth module..."
+echo "PROGRESS: 85"
 
 # Try to reload the module to pick up new firmware without reboot
 modprobe -r btusb || true
@@ -49,4 +54,5 @@ else
     echo "    [!] No controllers seen by bluetoothctl yet. A reboot may be required."
 fi
 
-echo "==> installation complete."
+echo "PROGRESS: 100"
+echo "STATUS: UB500 Drivers Installed"

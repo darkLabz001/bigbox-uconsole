@@ -24,15 +24,19 @@ HARV_DIR="/opt/theHarvester"
 PI_BIN="/usr/local/bin/phoneinfoga"
 SF_BIN="/usr/local/bin/subfinder"
 
+echo "STATUS: Initializing OSINT suite..."
+echo "PROGRESS: 5"
+
 # --- 1. sherlock from apt ---------------------------------------------------
 if ! dpkg-query -W -f='${Status}' sherlock 2>/dev/null | grep -q "ok installed"; then
-    echo "==> installing sherlock"
+    echo "STATUS: Installing sherlock..."
     DEBIAN_FRONTEND=noninteractive apt-get update </dev/null >/dev/null 2>&1
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         sherlock </dev/null
 else
     echo "==> sherlock already installed"
 fi
+echo "PROGRESS: 20"
 
 # --- 1b. subfinder binary --------------------------------------------------
 ARCH=$(uname -m)
@@ -48,7 +52,7 @@ if [[ -x "$SF_BIN" ]]; then
 elif [[ -z "$SF_ARCH" ]]; then
     echo "WARN: no subfinder release for $ARCH — skipping."
 else
-    echo "==> installing subfinder for $ARCH"
+    echo "STATUS: Installing subfinder binary..."
     TMP=$(mktemp -d)
     trap "rm -rf $TMP" EXIT
     
@@ -73,10 +77,11 @@ else
         echo "WARN: subfinder download failed — skipping."
     fi
 fi
+echo "PROGRESS: 40"
 
 # --- 2. theHarvester (cloned + pip into venv) -------------------------------
 if [[ ! -x "$VENV/bin/theHarvester" ]]; then
-    echo "==> installing theHarvester"
+    echo "STATUS: Installing theHarvester..."
     if [[ ! -d "$HARV_DIR/.git" ]]; then
         rm -rf "$HARV_DIR"
         git clone --depth 1 https://github.com/laramies/theHarvester.git "$HARV_DIR"
@@ -91,6 +96,7 @@ if [[ ! -x "$VENV/bin/theHarvester" ]]; then
 else
     echo "==> theHarvester already installed at $VENV/bin/theHarvester"
 fi
+echo "PROGRESS: 70"
 
 # --- 3. phoneinfoga binary --------------------------------------------------
 ARCH=$(uname -m)
@@ -106,7 +112,7 @@ if [[ -x "$PI_BIN" ]]; then
 elif [[ -z "$PI_ASSET" ]]; then
     echo "WARN: no phoneinfoga release for $ARCH — skipping."
 else
-    echo "==> installing phoneinfoga for $ARCH"
+    echo "STATUS: Installing phoneinfoga binary..."
     TMP=$(mktemp -d)
     trap "rm -rf $TMP" EXIT
     URL="https://github.com/sundowndev/phoneinfoga/releases/latest/download/$PI_ASSET"
@@ -121,6 +127,8 @@ else
         echo "WARN: phoneinfoga download from $URL failed — skipping."
     fi
 fi
+echo "PROGRESS: 100"
+echo "STATUS: OSINT Suite Installed"
 
 cat <<EOF
 
