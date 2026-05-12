@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Install the OSINT tools used by bigbox/sections/recon.py:
 #   - sherlock        (apt) -> /usr/bin/sherlock
+#   - subfinder       (binary release for the host arch)
+#                     -> /usr/local/bin/subfinder
 #   - theHarvester    (cloned from upstream, pip-installed into bigbox venv)
 #                     -> /opt/bigbox/.venv/bin/theHarvester
 #   - phoneinfoga     (binary release for the host arch)
@@ -20,6 +22,7 @@ fi
 VENV="/opt/bigbox/.venv"
 HARV_DIR="/opt/theHarvester"
 PI_BIN="/usr/local/bin/phoneinfoga"
+SF_BIN="/usr/local/bin/subfinder"
 
 # --- 1. sherlock from apt ---------------------------------------------------
 if ! dpkg-query -W -f='${Status}' sherlock 2>/dev/null | grep -q "ok installed"; then
@@ -29,6 +32,46 @@ if ! dpkg-query -W -f='${Status}' sherlock 2>/dev/null | grep -q "ok installed";
         sherlock </dev/null
 else
     echo "==> sherlock already installed"
+fi
+
+# --- 1b. subfinder binary --------------------------------------------------
+ARCH=$(uname -m)
+case "$ARCH" in
+    aarch64|arm64)  SF_ARCH="arm64" ;;
+    x86_64|amd64)   SF_ARCH="amd64" ;;
+    armv7l|armhf)   SF_ARCH="arm" ;;
+    *)              SF_ARCH="" ;;
+esac
+
+if [[ -x "$SF_BIN" ]]; then
+    echo "==> subfinder already at $SF_BIN"
+elif [[ -z "$SF_ARCH" ]]; then
+    echo "WARN: no subfinder release for $ARCH — skipping."
+else
+    echo "==> installing subfinder for $ARCH"
+    TMP=$(mktemp -d)
+    trap "rm -rf $TMP" EXIT
+    
+    # Get latest version from GitHub API
+    SF_LATEST=$(curl -s https://api.github.com/repos/projectdiscovery/subfinder/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+    if [[ -z "$SF_LATEST" ]]; then
+        SF_LATEST="2.14.0" # Fallback
+    fi
+    
+    SF_ASSET="subfinder_${SF_LATEST}_linux_${SF_ARCH}.zip"
+    URL="https://github.com/projectdiscovery/subfinder/releases/download/v${SF_LATEST}/$SF_ASSET"
+    
+    echo "    Downloading $URL ..."
+    if curl -fsSL --max-time 60 -o "$TMP/s.zip" "$URL"; then
+        unzip -q "$TMP/s.zip" -d "$TMP"
+        if [[ -f "$TMP/subfinder" ]]; then
+            install -m 0755 "$TMP/subfinder" "$SF_BIN"
+        else
+            echo "WARN: subfinder binary not found in archive"
+        fi
+    else
+        echo "WARN: subfinder download failed — skipping."
+    fi
 fi
 
 # --- 2. theHarvester (cloned + pip into venv) -------------------------------
@@ -84,6 +127,7 @@ cat <<EOF
 ==> OSINT install done.
 
   sherlock:     $(command -v sherlock || echo "NOT FOUND")
+  subfinder:    $([[ -x "$SF_BIN" ]] && echo "$SF_BIN" || echo "NOT FOUND")
   theHarvester: $([[ -x "$VENV/bin/theHarvester" ]] && echo "$VENV/bin/theHarvester" || echo "NOT FOUND")
   phoneinfoga:  $([[ -x "$PI_BIN" ]] && echo "$PI_BIN" || echo "NOT FOUND")
 

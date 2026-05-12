@@ -42,7 +42,7 @@ apt-get install -y --no-install-recommends \
     pcsxr \
     python3-serial rfkill \
     curl ca-certificates \
-    fonts-dejavu-core
+    fonts-dejavu-core unzip
 
 # --- 1b. tailscale ------------------------------------------------------------
 if ! command -v tailscale >/dev/null 2>&1; then
