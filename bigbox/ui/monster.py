@@ -14,18 +14,18 @@ from bigbox import theme
 class Monster:
     """A highly detailed evil demon companion for the Operator."""
 
-    # Assuming a 512x512 sprite sheet with 8x8 frames (64x64 per frame)
+    # 512x512 sprite sheet with 8x8 frames (64x64 per frame)
     ANIMATIONS = {
         "IDLE": list(range(0, 8)),        # Row 0
         "WALK": list(range(8, 16)),       # Row 1
-        "HAPPY": list(range(16, 24)),     # Row 2 (Attack/Cast)
-        "HURT": list(range(24, 32)),      # Row 3 (Die/Hurt)
+        "HAPPY": list(range(16, 24)),     # Row 2
+        "HURT": list(range(24, 32)),      # Row 3
     }
 
     def __init__(self):
         self.frames = []
         self.frame_size = 64
-        self.display_size = 96 # Big and detailed
+        self.display_size = 96 
         self.current_state = "IDLE"
         self.frame_index = 0
         self.last_update = time.time()
@@ -42,11 +42,9 @@ class Monster:
             return
             
         try:
-            # Check if pygame display is ready
             if not pygame.display.get_init() or pygame.display.get_surface() is None:
                 return
 
-            # Absolute root of the project
             ROOT = Path(__file__).resolve().parents[2]
             img_path = ROOT / "assets" / "monster.png"
             
@@ -54,31 +52,29 @@ class Monster:
                 img_path = Path("assets/monster.png").resolve()
             
             if img_path.exists():
-                # Force load and convert
+                # Load the REAL detailed sprite
                 full_sheet = pygame.image.load(str(img_path.absolute())).convert_alpha()
-                
-                # --- High-Contrast B&W Processing ---
-                white_sheet = full_sheet.copy()
-                white_sheet.fill((255, 255, 255, 255), special_flags=pygame.BLEND_RGBA_MAX)
                 
                 # Extract frames (64x64 each)
                 cols = full_sheet.get_width() // self.frame_size
                 rows = full_sheet.get_height() // self.frame_size
                 
                 self.frames = []
-                for r in range(min(rows, 4)): # Only need first 4 rows for basic anims
+                for r in range(min(rows, 4)):
                     for c in range(cols):
                         frame_surf = pygame.Surface((self.frame_size, self.frame_size), pygame.SRCALPHA)
-                        frame_surf.blit(white_sheet, (0, 0), (c * self.frame_size, r * self.frame_size, self.frame_size, self.frame_size))
+                        frame_surf.blit(full_sheet, (0, 0), (c * self.frame_size, r * self.frame_size, self.frame_size, self.frame_size))
+                        
+                        # Scale up
                         scaled = pygame.transform.smoothscale(frame_surf, (self.display_size, self.display_size))
                         self.frames.append(scaled)
                 
                 self._loaded = True
-                print(f"[monster] Successfully loaded {len(self.frames)} frames")
+                print(f"[monster] Success: Detailed demon loaded ({len(self.frames)} frames)")
             else:
-                print(f"[monster] Asset not found at {img_path}")
+                print(f"[monster] Error: monster.png missing")
         except Exception as e:
-            print(f"[monster] Lazy load failed: {e}")
+            print(f"[monster] Load failure: {e}")
 
     def set_state(self, state: str):
         if state in self.ANIMATIONS and self.current_state != state:
@@ -90,27 +86,22 @@ class Monster:
         now = time.time()
         self.last_update = now
 
-        # Animation timing
         anim_speed = 0.15
         if self.current_state == "WALK":
             anim_speed = 0.1
         elif self.current_state == "HAPPY":
             anim_speed = 0.08
-        elif self.current_state == "HURT":
-            anim_speed = 0.2
 
         if now - self.state_start > anim_speed:
             self.frame_index = (self.frame_index + 1) % len(self.ANIMATIONS[self.current_state])
             self.state_start = now
 
-        # Logic for transitions
         if self.current_state == "HAPPY" and self.frame_index == len(self.ANIMATIONS["HAPPY"]) - 1:
             self.set_state("IDLE")
         
         if self.current_state == "HURT" and self.frame_index == len(self.ANIMATIONS["HURT"]) - 1:
             self.set_state("IDLE")
 
-        # Movement
         if self.current_state == "IDLE" and random.random() < 0.01:
             self.target_x = random.randint(40, 130)
             self.set_state("WALK")
@@ -127,8 +118,8 @@ class Monster:
             self._load_assets()
 
         if not self.frames:
-            # Very subtle fallback instead of the big red box
-            pygame.draw.rect(surf, (100, 100, 100), (self.pos[0] - 2, self.pos[1], 4, 4))
+            # Subtle indicator if loading fails
+            pygame.draw.circle(surf, (50, 0, 0), (self.pos[0], self.pos[1]), 5)
             return
 
         anim_frames = self.ANIMATIONS.get(self.current_state, self.ANIMATIONS["IDLE"])
