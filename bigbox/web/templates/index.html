@@ -238,9 +238,10 @@
         </div>
 
         <div class="card">
-            <h2>COMMS :: <span id="sys-ip">0.0.0.0</span></h2>
+            <h2>COMMS :: <span id="sys-ip">--</span></h2>
             <div class="stat-row"><span>SSID</span><span id="val-ssid" style="font-weight: bold; font-family: monospace;">--</span></div>
             <div class="stat-row"><span>SIGNAL</span><div class="stat-bar-bg"><div id="bar-wifi" class="stat-bar-fill"></div></div><span id="val-wifi" class="stat-val">--</span></div>
+            <div id="ip-iface-list" style="font-family: monospace; font-size: 11px; color: var(--fg-dim); margin-top: 6px; line-height: 1.5;"></div>
         </div>
 
         <div class="card">
@@ -381,6 +382,12 @@
             document.getElementById('val-ssid').innerText = data.wifi.ssid || 'OFFLINE';
             document.getElementById('val-wifi').innerText = data.wifi.signal || '--';
             document.getElementById('bar-wifi').style.width = (data.wifi.signal || 0) + '%';
+            if (data.ip) {
+                document.getElementById('sys-ip').innerText = data.ip.primary;
+                document.getElementById('ip-iface-list').innerHTML = (data.ip.interfaces || [])
+                    .map(i => `<div>${escHtml(i.name)}: <span style="color:var(--fg)">${escHtml(i.ip)}</span></div>`)
+                    .join('');
+            }
         } catch(e) { console.error('refreshStats', e); }
     }
 

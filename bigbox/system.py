@@ -39,6 +39,7 @@ class SystemStats:
             "wifi": self._get_wifi_info(),
             "battery": self._get_battery_info(),
             "load": os.getloadavg()[0],
+            "ip": self._get_ip_info(),
         }
         
         self._cache = stats
@@ -76,6 +77,35 @@ class SystemStats:
         except:
             pass
         return info
+
+    def _get_ip_info(self) -> Dict[str, Any]:
+        # Primary outbound IP: open a UDP socket toward a public address but
+        # never send — the kernel still picks the routing interface and
+        # getsockname() returns its local address. No packets leave.
+        primary = None
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(0.5)
+            s.connect(("8.8.8.8", 80))
+            primary = s.getsockname()[0]
+            s.close()
+        except Exception:
+            pass
+
+        # Full per-interface list so tactical users can see wlan0 / eth0 /
+        # tailscale0 addresses at a glance.
+        interfaces: list[Dict[str, str]] = []
+        try:
+            for name, addrs in psutil.net_if_addrs().items():
+                if name == "lo":
+                    continue
+                for a in addrs:
+                    if a.family == socket.AF_INET and a.address:
+                        interfaces.append({"name": name, "ip": a.address})
+        except Exception:
+            pass
+
+        return {"primary": primary or "OFFLINE", "interfaces": interfaces}
 
     def _get_battery_info(self) -> Optional[Dict[str, Any]]:
         info = power.battery()
