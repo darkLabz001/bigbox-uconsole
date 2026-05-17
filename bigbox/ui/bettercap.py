@@ -49,11 +49,15 @@ class BettercapView:
         self._start_engine()
 
     def _start_engine(self):
+        from bigbox import hardware
+        ifaces = hardware.list_wifi_clients()
+        iface = ifaces[0] if ifaces else "wlan0"
+        
         # bigbox.service runs as root; calling `sudo bettercap` is a
         # pointless round-trip and hangs on a missing sudoers entry.
         cmd = [
             "bettercap",
-            "-iface", "wlan0",
+            "-iface", iface,
             "-no-colors",
             "-eval", "net.probe on; ticker on; set ticker.commands 'net.show; events.show 5'; set ticker.period 2"
         ]

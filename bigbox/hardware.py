@@ -17,10 +17,43 @@ import threading
 from typing import Iterable
 
 
+import json
+from pathlib import Path
+
 _lock = threading.Lock()
 _IN_USE_IFACES: set[str] = set()
 _IN_USE_BT: set[str] = set()
 
+_HW_CFG_PATH = Path("/etc/bigbox/hardware.json")
+
+def load_hardware_config() -> dict:
+    if _HW_CFG_PATH.exists():
+        try:
+            with open(_HW_CFG_PATH, "r") as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_hardware_config(cfg: dict):
+    try:
+        _HW_CFG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(_HW_CFG_PATH, "w") as f:
+            json.dump(cfg, f, indent=4)
+    except:
+        pass
+
+# Global preference: if True, tactical tools will ignore wlan0 if a USB
+# adapter (wlan1+) is present.
+_cfg = load_hardware_config()
+PREFER_USB_WIFI = _cfg.get("prefer_usb_wifi", True)
+
+def set_prefer_usb_wifi(val: bool):
+    global PREFER_USB_WIFI
+    PREFER_USB_WIFI = val
+    cfg = load_hardware_config()
+    cfg["prefer_usb_wifi"] = val
+    save_hardware_config(cfg)
 
 def check_dependencies(*binaries: str) -> list[str]:
     """Check if a list of binaries are in the PATH.
@@ -265,13 +298,22 @@ def list_monitor_capable_interfaces() -> list[WifiInterface]:
 
 
 def list_monitor_capable_clients() -> list[str]:
-
     """Subset of list_wifi_clients() filtered to monitor-mode-capable ifaces.
 
     Used by views that put the iface into monitor mode so the picker
     only shows adapters that can actually do the job.
     """
-    return [c for c in list_wifi_clients() if iface_supports_monitor(c)]
+    all_clients = list_wifi_clients()
+    capable = [c for c in all_clients if iface_supports_monitor(c)]
+    
+    # Prioritization logic: sort USB/Alfa adapters to the front.
+    alfas = list_alfa_ifaces()
+    usb_capable = [c for c in capable if c in alfas]
+    internal_capable = [c for c in capable if c not in alfas]
+    
+    if PREFER_USB_WIFI and usb_capable:
+        return usb_capable + internal_capable
+    return usb_capable + internal_capable
 
 
 def enable_monitor(iface: str, timeout: float = 15.0) -> str | None:
@@ -426,4 +468,12 @@ def list_wifi_clients() -> list[str]:
             cur_type = m.group(1)
     if cur_name and cur_type == "managed":
         clients.append(cur_name)
-    return clients
+
+    # Sort so USB/Alfa ifaces come first
+    alfas = list_alfa_ifaces()
+    usb_ifaces = [c for c in clients if c in alfas]
+    internal_ifaces = [c for c in clients if c not in alfas]
+    
+    if PREFER_USB_WIFI and usb_ifaces:
+        return usb_ifaces + internal_ifaces
+    return usb_ifaces + internal_ifaces

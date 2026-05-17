@@ -34,7 +34,7 @@ PHASE_ATTACKING = "attacking"
 PHASE_LOOT = "loot"
 
 GAMIFICATION_PATH = "/opt/ragnar/data/gamification.json"
-LOOT_DIRS = ["hs", "/root/hs", "handshakes"]
+LOOT_DIRS = ["loot/handshakes", "hs", "/root/hs", "handshakes"]
 
 @dataclass
 class WifiteTarget:
@@ -165,7 +165,7 @@ class WifiteView:
         self.loot_list = sorted(list(set(self.loot_list)), key=lambda p: p.stat().st_mtime, reverse=True)
 
     def _get_full_args(self) -> List[str]:
-        args = ["--dict", "/usr/share/wordlists/rockyou.txt"]
+        args = ["--dict", "/usr/share/wordlists/rockyou.txt", "--hs-dir", "loot/handshakes"]
         if self.opt_5ghz: args.append("-5")
         if self.opt_wps: args.append("--wps")
         else: args.append("--no-wps")

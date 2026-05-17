@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import time
 from typing import TYPE_CHECKING
 
 import pygame
@@ -25,10 +26,72 @@ from bigbox import shop as shop_mod
 from bigbox import webhooks as webhook_mod
 from bigbox.gps import GPSReader
 
+from bigbox import system as system_mod
+from bigbox import background as bg_mod
+from bigbox import activity as activity_mod
+
 if TYPE_CHECKING:
     from bigbox.app import App
 
 app = FastAPI()
+
+@app.get("/system/stats")
+async def system_stats():
+    return system_mod.get_system_stats()
+
+@app.get("/system/activity")
+async def activity_list():
+    recent = activity_mod.recent(20)
+    return [{
+        "ts": e.ts,
+        "message": e.message
+    } for e in recent]
+
+@app.get("/gps/current")
+async def gps_current():
+    fix = GPSReader.get_shared().latest()
+    return {
+        "has_fix": fix.has_fix,
+        "lat": fix.lat,
+        "lon": fix.lon,
+        "alt": fix.alt_m,
+        "sats": fix.sats,
+        "speed": fix.speed_kmh,
+        "heading": fix.heading_deg,
+        "device": fix.device_path
+    }
+
+@app.get("/tasks")
+async def tasks_list():
+    tasks = bg_mod.list_tasks()
+    return [{
+        "id": t.id,
+        "label": t.label,
+        "section": t.section,
+        "started_at": t.started_at,
+        "age_seconds": time.time() - t.started_at
+    } for t in tasks]
+
+@app.post("/tasks/stop/{task_id}")
+async def task_stop(task_id: str):
+    ok = bg_mod.stop_one(task_id)
+    return {"status": "ok" if ok else "not_found"}
+
+@app.post("/tasks/stop_all")
+async def tasks_stop_all():
+    bg_mod.stop_all()
+    return {"status": "ok"}
+
+@app.post("/system/reboot")
+async def system_reboot():
+    subprocess.Popen(["systemctl", "reboot"])
+    return {"status": "rebooting"}
+
+@app.post("/system/poweroff")
+async def system_poweroff():
+    subprocess.Popen(["systemctl", "poweroff"])
+    return {"status": "powering_off"}
+
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 MEDIA_DIR = Path("media")
 ALLOWED_FOLDERS = ("movies", "tv")
@@ -270,7 +333,7 @@ async def wardrive_upload(name: str):
 
 @app.get("/roms")
 async def list_roms():
-    """Per-system rom listing (and the ps1-bios bucket)."""
+    """Quick listing of what's in each folder, for the web UI to show."""
     return emu_mod.list_all_roms()
 
 
@@ -453,4 +516,3 @@ async def gps_phone(
 async def gps_link(request: Request):
     """Page for the phone to open to share its GPS."""
     return templates.TemplateResponse(request, "gps_link.html")
-

@@ -145,7 +145,16 @@ def _candidate_devices() -> list[str]:
 class GPSReader:
     """Background NMEA reader. Thread-safe latest() snapshot."""
 
-    BAUDS = (9600, 115200, 38400)  # LC86L typically 115200 from cold
+    _shared: Optional[GPSReader] = None
+
+    @classmethod
+    def get_shared(cls) -> GPSReader:
+        if cls._shared is None:
+            cls._shared = GPSReader()
+            cls._shared.start()
+        return cls._shared
+
+    BAUDS = (9600, 115200, 38400)
     
     _external_fix: Optional[GPSFix] = None
     _external_lock = threading.Lock()

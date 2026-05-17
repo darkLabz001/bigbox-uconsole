@@ -2,30 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BigB0X :: WEB_UI</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- xterm.js for the terminal -->
+    <title>BigB0X :: TACTICAL_DASHBOARD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --bg: #000000;
             --bg-alt: #0a0a0a;
             --fg: #ffffff;
-            --fg-dim: #888888;
-            --accent: #ffffff; /* High contrast White */
-            --accent-glow: 0 0 10px rgba(255, 255, 255, 0.5);
+            --fg-dim: #666666;
+            --accent: #ffffff;
+            --accent-glow: 0 0 15px rgba(255, 255, 255, 0.4);
             --border: #222222;
-            --err: #ff4444;
+            --err: #ff3333;
+            --ok: #ffffff;
+            --warn: #aaaaaa;
+            --header-h: 60px;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             background: var(--bg);
             color: var(--fg);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -33,745 +38,476 @@
             user-select: none;
         }
 
-        /* --- Header & Tabs --- */
         header {
+            height: var(--header-h);
             background: var(--bg-alt);
-            border-bottom: 2px solid var(--accent);
-            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            z-index: 100;
+            padding: 0 20px;
+            justify-content: space-between;
+            z-index: 1000;
         }
+        .logo-box { display: flex; align-items: center; gap: 15px; }
         .logo {
-            font-weight: bold;
-            letter-spacing: 4px;
-            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            font-size: 18px;
             text-shadow: var(--accent-glow);
-            position: relative;
-            display: inline-block;
         }
-
-        /* Glitch Effect */
-        .logo::before,
-        .logo::after {
-            content: "BigB0X";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-alt);
-        }
-
-        .logo::before {
-            left: 2px;
-            text-shadow: -2px 0 #ff00c1;
-            clip: rect(44px, 450px, 56px, 0);
-            animation: glitch-anim 5s infinite linear alternate-reverse;
-        }
-
-        .logo::after {
-            left: -2px;
-            text-shadow: -2px 0 #00fff9;
-            clip: rect(44px, 450px, 56px, 0);
-            animation: glitch-anim2 5s infinite linear alternate-reverse;
-        }
-
-        @keyframes glitch-anim {
-            0% { clip: rect(31px, 9999px, 94px, 0); }
-            5% { clip: rect(70px, 9999px, 71px, 0); }
-            10% { clip: rect(29px, 9999px, 83px, 0); }
-            15% { clip: rect(16px, 9999px, 91px, 0); }
-            20% { clip: rect(2px, 9999px, 23px, 0); }
-            25% { clip: rect(45px, 9999px, 40px, 0); }
-            30% { clip: rect(57px, 9999px, 98px, 0); }
-            35% { clip: rect(15px, 9999px, 64px, 0); }
-            40% { clip: rect(89px, 9999px, 92px, 0); }
-            45% { clip: rect(1px, 9999px, 69px, 0); }
-            50% { clip: rect(98px, 9999px, 12px, 0); }
-            55% { clip: rect(61px, 9999px, 11px, 0); }
-            60% { clip: rect(3px, 9999px, 47px, 0); }
-            65% { clip: rect(51px, 9999px, 18px, 0); }
-            70% { clip: rect(37px, 9999px, 35px, 0); }
-            75% { clip: rect(96px, 9999px, 49px, 0); }
-            80% { clip: rect(13px, 9999px, 25px, 0); }
-            85% { clip: rect(24px, 9999px, 36px, 0); }
-            90% { clip: rect(60px, 9999px, 70px, 0); }
-            95% { clip: rect(10px, 9999px, 80px, 0); }
-            100% { clip: rect(44px, 9999px, 98px, 0); }
-        }
-
-        @keyframes glitch-anim2 {
-            0% { clip: rect(81px, 9999px, 14px, 0); }
-            5% { clip: rect(21px, 9999px, 57px, 0); }
-            10% { clip: rect(11px, 9999px, 2px, 0); }
-            15% { clip: rect(93px, 9999px, 25px, 0); }
-            20% { clip: rect(54px, 9999px, 7px, 0); }
-            25% { clip: rect(35px, 9999px, 82px, 0); }
-            30% { clip: rect(72px, 9999px, 63px, 0); }
-            35% { clip: rect(5px, 9999px, 34px, 0); }
-            40% { clip: rect(29px, 9999px, 42px, 0); }
-            45% { clip: rect(51px, 9999px, 9px, 0); }
-            50% { clip: rect(82px, 9999px, 91px, 0); }
-            55% { clip: rect(11px, 9999px, 61px, 0); }
-            60% { clip: rect(47px, 9999px, 3px, 0); }
-            65% { clip: rect(18px, 9999px, 51px, 0); }
-            70% { clip: rect(35px, 9999px, 37px, 0); }
-            75% { clip: rect(49px, 9999px, 96px, 0); }
-            80% { clip: rect(25px, 9999px, 13px, 0); }
-            85% { clip: rect(36px, 9999px, 24px, 0); }
-            90% { clip: rect(70px, 9999px, 60px, 0); }
-            95% { clip: rect(80px, 9999px, 10px, 0); }
-            100% { clip: rect(98px, 9999px, 44px, 0); }
-        }
-        nav {
+        .sys-status {
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--fg-dim);
             display: flex;
-            gap: 10px;
+            gap: 15px;
         }
+        .sys-status b { color: var(--fg); }
+
+        nav { display: flex; gap: 5px; height: 100%; }
         .tab-btn {
             background: transparent;
-            border: 1px solid transparent;
+            border: none;
             color: var(--fg-dim);
-            padding: 8px 16px;
+            padding: 0 15px;
             cursor: pointer;
-            font-family: monospace;
-            font-size: 14px;
+            font-size: 11px;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 1px;
             transition: 0.2s;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid transparent;
         }
         .tab-btn:hover { color: var(--fg); }
         .tab-btn.active {
             color: var(--fg);
-            border: 1px solid var(--accent);
-            box-shadow: var(--accent-glow);
+            border-bottom-color: var(--accent);
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.05));
         }
 
-        /* --- Main Content --- */
-        main {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-        }
+        main { flex: 1; position: relative; overflow: hidden; }
         .tab-panel {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             display: none;
-            padding: 20px;
             overflow-y: auto;
-        }
-        .tab-panel.active { display: block; }
-
-        /* --- Remote Tab --- */
-        .remote-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 40px;
-            align-items: flex-start;
-        }
-        .screen-box {
-            background: #000;
-            border: 1px solid var(--border);
-            max-width: 640px;
-            width: 100%;
-        }
-        .screen-box img { width: 100%; display: block; }
-
-        .controller {
-            display: flex;
-            gap: 40px;
-            background: var(--bg-alt);
             padding: 20px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
         }
-        .dpad {
-            display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-gap: 5px;
-        }
-        .face {
-            display: grid;
-            grid-template-columns: repeat(2, 60px);
-            grid-gap: 10px;
-        }
-        .btn {
-            width: 60px;
-            height: 60px;
-            background: var(--bg);
-            border: 1px solid var(--fg-dim);
-            color: var(--fg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-weight: bold;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        .btn:active { background: var(--fg); color: var(--bg); }
-        .btn-rect {
-            width: 90px;
-            height: 35px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .system-row {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
+        .tab-panel.active { display: grid; }
 
-        /* --- Library & Wardrive UI --- */
+        .dashboard-grid {
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-gap: 20px;
+            align-content: start;
+        }
         .card {
             background: var(--bg-alt);
             border: 1px solid var(--border);
             padding: 20px;
-            margin-bottom: 20px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
         .card h2 {
-            margin-top: 0;
-            font-size: 16px;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-            color: var(--accent);
-        }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 12px; color: var(--fg-dim); }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--fg);
-            font-family: monospace;
-        }
-        .action-btn {
-            background: transparent;
-            border: 1px solid var(--fg);
-            color: var(--fg);
-            padding: 10px 20px;
-            cursor: pointer;
-            font-family: monospace;
+            margin: 0;
+            font-size: 12px;
             text-transform: uppercase;
-        }
-        .action-btn:hover { background: var(--fg); color: var(--bg); }
-        .list-container {
-            margin-top: 15px;
-            font-size: 13px;
-        }
-        .list-item {
+            letter-spacing: 2px;
+            color: var(--fg-dim);
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #111;
+            align-items: center;
+            border-left: 3px solid var(--accent);
+            padding-left: 10px;
         }
-        .list-item:last-child { border-bottom: none; }
 
-        /* --- Terminal Tab --- */
-        #terminal-container {
-            width: 100%;
-            height: 100%;
+        .stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .stat-bar-bg { flex: 1; height: 3px; background: #111; margin: 0 15px; position: relative; }
+        .stat-bar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--fg); width: 0%; transition: width 0.5s ease; }
+        .stat-val { font-family: monospace; width: 50px; text-align: right; }
+
+        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #111; font-size: 12px; }
+        .task-info { display: flex; flex-direction: column; gap: 2px; }
+        .task-label { font-weight: bold; }
+        .task-meta { color: var(--fg-dim); font-size: 10px; text-transform: uppercase; }
+        .task-stop { background: transparent; border: 1px solid var(--err); color: var(--err); padding: 4px 8px; font-size: 10px; cursor: pointer; }
+        .task-stop:hover { background: var(--err); color: #000; }
+
+        /* Activity Log */
+        .activity-log {
+            font-family: monospace;
+            font-size: 11px;
             background: #000;
+            border: 1px solid #111;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
+        .activity-entry { border-left: 2px solid #222; padding-left: 8px; }
+        .activity-ts { color: var(--fg-dim); margin-right: 8px; }
 
-        ::-webkit-scrollbar { width: 6px; }
+        .remote-layout { grid-template-columns: 1fr 450px; padding: 0; overflow: hidden; }
+        .screen-container { background: #000; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); position: relative; }
+        .screen-container img { max-width: 90%; max-height: 90%; object-fit: contain; box-shadow: 0 0 50px rgba(255,255,255,0.05); border: 2px solid #111; }
+        
+        .controls-container { padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
+        .dpad-container { display: grid; grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); gap: 10px; }
+        .face-container { display: grid; grid-template-columns: repeat(2, 70px); grid-template-rows: repeat(2, 70px); gap: 20px; transform: rotate(45deg); }
+        .face-container .btn { transform: rotate(-45deg); }
+        
+        .btn {
+            width: 70px; height: 70px; background: var(--bg-alt); border: 1px solid var(--border); color: var(--fg);
+            display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 18px; font-weight: bold;
+            cursor: pointer; transition: 0.1s; box-shadow: 0 4px 0 #111;
+        }
+        .btn:active { background: var(--fg); color: #000; transform: translateY(2px); box-shadow: none; }
+        
+        .shoulder-btns { display: flex; gap: 40px; margin-bottom: 20px; }
+        .btn-shoulder { width: 100px; height: 50px; border-radius: 10px; font-size: 14px; }
+        
+        .sys-btns { display: flex; gap: 20px; }
+        .btn-pill { width: 90px; height: 35px; border-radius: 17px; font-size: 11px; text-transform: uppercase; }
+
+        .list-container { display: flex; flex-direction: column; gap: 5px; }
+        .list-item { padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid #111; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .list-item:hover { border-color: #333; }
+        
+        .action-btn { background: transparent; border: 1px solid var(--fg); color: var(--fg); padding: 10px 20px; font-family: monospace; text-transform: uppercase; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
+        .action-btn:hover { background: var(--fg); color: #000; }
+        
+        #map { height: 400px; background: #111; border: 1px solid var(--border); margin-bottom: 20px; }
+        .leaflet-container { background: #000 !important; }
+
+        #terminal-container { width: 100%; height: 100%; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--border); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }
+        ::-webkit-scrollbar-thumb { background: #222; }
+
+        @media (max-width: 1024px) {
+            .remote-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .screen-container { border-right: none; border-bottom: 1px solid var(--border); min-height: 400px; }
+            .controls-container { padding: 40px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="logo">BigB0X</div>
+    <div class="logo-box">
+        <div class="logo">BigB0X</div>
+        <div class="sys-status">
+            <span>CPU <b id="head-cpu">--%</b></span>
+            <span>MEM <b id="head-mem">--%</b></span>
+            <span>BAT <b id="head-bat">--%</b></span>
+        </div>
+    </div>
     <nav>
-        <button class="tab-btn active" onclick="showTab('remote')">Remote</button>
+        <button class="tab-btn active" onclick="showTab('dashboard')">Dash</button>
+        <button class="tab-btn" onclick="showTab('remote')">Control</button>
         <button class="tab-btn" onclick="showTab('library')">Library</button>
-        <button class="tab-btn" onclick="showTab('wardrive')">Wardrive</button>
+        <button class="tab-btn" onclick="showTab('wardrive')">Signals</button>
+        <button class="tab-btn" onclick="showTab('terminal')">Term</button>
         <button class="tab-btn" onclick="showTab('shop')">Shop</button>
-        <button class="tab-btn" onclick="showTab('terminal')">Terminal</button>
-        <button class="tab-btn" onclick="showTab('settings')">Settings</button>
+        <button class="tab-btn" onclick="showTab('settings')">Sys</button>
     </nav>
 </header>
 
 <main>
-    <!-- REMOTE PANEL -->
-    <div id="remote" class="tab-panel active">
-        <div class="remote-container">
-            <div class="screen-box">
-                <img src="/video_feed" alt="Screen Mirror">
-            </div>
-            <div>
-                <div class="controller">
-                    <div class="dpad">
-                        <div></div><div class="btn" onmousedown="press('up')" ontouchstart="press('up')">U</div><div></div>
-                        <div class="btn" onmousedown="press('left')" ontouchstart="press('left')">L</div>
-                        <div></div>
-                        <div class="btn" onmousedown="press('right')" ontouchstart="press('right')">R</div>
-                        <div></div><div class="btn" onmousedown="press('down')" ontouchstart="press('down')">D</div><div></div>
-                    </div>
-                    <div class="face">
-                        <div class="btn" style="grid-column: 2" onmousedown="press('y')" ontouchstart="press('y')">Y</div>
-                        <div class="btn" onmousedown="press('x')" ontouchstart="press('x')">X</div>
-                        <div class="btn" onmousedown="press('b')" ontouchstart="press('b')">B</div>
-                        <div class="btn" style="grid-column: 2" onmousedown="press('a')" ontouchstart="press('a')">A</div>
-                    </div>
-                </div>
-                <div class="system-row">
-                    <div class="btn btn-rect" onmousedown="press('select')" ontouchstart="press('select')">SELECT</div>
-                    <div class="btn btn-rect" onmousedown="press('start')" ontouchstart="press('start')">START</div>
-                </div>
+    <div id="dashboard" class="tab-panel active dashboard-grid">
+        <div class="card" style="grid-column: span 1;">
+            <h2>VITALS</h2>
+            <div class="stat-row"><span>CPU</span><div class="stat-bar-bg"><div id="bar-cpu" class="stat-bar-fill"></div></div><span id="val-cpu" class="stat-val">--%</span></div>
+            <div class="stat-row"><span>MEM</span><div class="stat-bar-bg"><div id="bar-mem" class="stat-bar-fill"></div></div><span id="val-mem" class="stat-val">--%</span></div>
+            <div class="stat-row"><span>DISK</span><div class="stat-bar-bg"><div id="bar-disk" class="stat-bar-fill"></div></div><span id="val-disk" class="stat-val">--%</span></div>
+            <div class="stat-row"><span>TEMP</span><div class="stat-bar-bg"><div id="bar-temp" class="stat-bar-fill"></div></div><span id="val-temp" class="stat-val">--°F</span></div>
+        </div>
+
+        <div class="card" style="grid-column: span 1;">
+            <h2>BACKGROUND_TASKS <button class="task-stop" onclick="stopAllTasks()" style="border-color:var(--fg-dim); color:var(--fg-dim)">KILL_ALL</button></h2>
+            <div id="taskList" class="list-container"></div>
+        </div>
+
+        <div class="card" style="grid-column: span 2;">
+            <h2>ACTIVITY_LOG</h2>
+            <div id="activityLog" class="activity-log"></div>
+        </div>
+
+        <div class="card">
+            <h2>COMMS :: <span id="sys-ip">0.0.0.0</span></h2>
+            <div class="stat-row"><span>SSID</span><span id="val-ssid" style="font-weight: bold; font-family: monospace;">--</span></div>
+            <div class="stat-row"><span>SIGNAL</span><div class="stat-bar-bg"><div id="bar-wifi" class="stat-bar-fill"></div></div><span id="val-wifi" class="stat-val">--</span></div>
+        </div>
+
+        <div class="card">
+            <h2>COMMAND_SEQUENCES</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="action-btn" onclick="doReboot()">Reboot</button>
+                <button class="action-btn" onclick="doPoweroff()">Power Off</button>
+                <button class="action-btn" onclick="showTab('terminal')">Root Shell</button>
+                <button class="action-btn" onclick="refreshStats()">Sync Vitals</button>
             </div>
         </div>
     </div>
 
-    <!-- LIBRARY PANEL -->
-    <div id="library" class="tab-panel">
+    <div id="remote" class="tab-panel remote-layout">
+        <div class="screen-container">
+            <img src="/video_feed" alt="Screen Mirror">
+        </div>
+        <div class="controls-container">
+            <div class="shoulder-btns">
+                <div class="btn btn-shoulder" onmousedown="press('ll')">L1</div>
+                <div class="btn" style="width: 50px; height: 50px; font-size: 12px;" onmousedown="press('hk')">HK</div>
+                <div class="btn btn-shoulder" onmousedown="press('rr')">R1</div>
+            </div>
+            <div style="display: flex; gap: 60px; align-items: center;">
+                <div class="dpad-container">
+                    <div></div><div class="btn" onmousedown="press('up')">U</div><div></div>
+                    <div class="btn" onmousedown="press('left')">L</div><div></div><div class="btn" onmousedown="press('right')">R</div>
+                    <div></div><div class="btn" onmousedown="press('down')">D</div><div></div>
+                </div>
+                <div class="face-container">
+                    <div class="btn" onmousedown="press('y')">Y</div>
+                    <div class="btn" onmousedown="press('x')">X</div>
+                    <div class="btn" onmousedown="press('b')">B</div>
+                    <div class="btn" onmousedown="press('a')">A</div>
+                </div>
+            </div>
+            <div class="sys-btns">
+                <div class="btn btn-pill" onmousedown="press('select')">SELECT</div>
+                <div class="btn btn-pill" onmousedown="press('start')">START</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="library" class="tab-panel dashboard-grid">
         <div class="card">
-            <h2>GAMES :: ROMS</h2>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <select id="romSystem" style="background: #000; color: #fff; border: 1px solid var(--border); padding: 8px;">
-                    <option value="gbc">GAME BOY / GBC</option>
-                    <option value="gba">GAME BOY ADVANCE</option>
-                    <option value="ps1">PLAYSTATION 1</option>
-                    <option value="ps1-bios">PS1 BIOS</option>
-                </select>
+            <h2>GAMES_INTEL</h2>
+            <div style="display: flex; gap: 10px;">
+                <select id="romSystem" style="flex: 1;"><option value="gbc">GB COLOR</option><option value="gba">GB ADVANCE</option><option value="ps1">PS1</option></select>
+                <button class="action-btn" onclick="document.getElementById('romInput').click()">UPLOAD</button>
                 <input type="file" id="romInput" style="display: none;">
-                <button class="action-btn" onclick="document.getElementById('romInput').click()">Upload ROM</button>
-                <span id="romStatus" style="font-size: 12px; color: var(--fg-dim);"></span>
             </div>
             <div id="romList" class="list-container"></div>
         </div>
-
         <div class="card">
-            <h2>MEDIA :: UPLOAD</h2>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <select id="mediaFolder" style="background: #000; color: #fff; border: 1px solid var(--border); padding: 8px;">
-                    <option value="movies">MOVIES</option>
-                    <option value="tv">TV SHOWS</option>
-                </select>
+            <h2>MEDIA_DROP</h2>
+            <div style="display: flex; gap: 10px;">
+                <select id="mediaFolder" style="flex: 1;"><option value="movies">MOVIES</option><option value="tv">TV SHOWS</option></select>
+                <button class="action-btn" onclick="document.getElementById('mediaInput').click()">UPLOAD</button>
                 <input type="file" id="mediaInput" style="display: none;">
-                <button class="action-btn" onclick="document.getElementById('mediaInput').click()">Upload File</button>
-                <span id="mediaStatus" style="font-size: 12px; color: var(--fg-dim);"></span>
             </div>
             <div id="mediaList" class="list-container"></div>
         </div>
+    </div>
 
-        <div class="card">
-            <h2>RETROACHIEVEMENTS</h2>
-            <div id="raStatus" style="font-size: 13px; margin-bottom: 10px;">Checking status...</div>
-            <div id="raForm" style="display:none;">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="raUser">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="raPass">
-                </div>
-                <button class="action-btn" onclick="raLogin()">Sign In</button>
-            </div>
-            <div id="raInfo" style="display:none;">
-                <span>Signed in as <b id="raUserLabel"></b></span>
-                <button class="action-btn" style="margin-left: 20px; padding: 5px 10px; font-size: 11px;" onclick="raLogout()">Sign Out</button>
-            </div>
+    <div id="wardrive" class="tab-panel dashboard-grid">
+        <div class="card" style="grid-column: span 2;">
+            <h2>LIVE_TACTICAL_MAP <span id="gps-status" style="font-size: 10px; float: right; color: var(--err);">NO FIX</span></h2>
+            <div id="map"></div>
+        </div>
+        <div class="card"><h2>WIGLE_RELAY</h2><div id="wigleAuth" style="font-size: 13px;">...</div></div>
+        <div class="card"><h2>COLLECTED_DATA</h2><div id="wardriveList" class="list-container"></div></div>
+    </div>
+
+    <div id="terminal" class="tab-panel" style="padding: 0;"><div id="terminal-container"></div></div>
+
+    <div id="shop" class="tab-panel dashboard-grid">
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>BOXSHOP_CATALOG <button class="action-btn" style="padding: 2px 10px; font-size: 10px;" onclick="refreshShop()">REFRESH</button></h2>
+            <div id="shopList" class="list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 10px;"></div>
         </div>
     </div>
 
-    <!-- WARDRIVE PANEL -->
-    <div id="wardrive" class="tab-panel">
+    <div id="settings" class="tab-panel dashboard-grid">
         <div class="card">
-            <h2>WIGLE :: AUTH</h2>
-            <div id="wigleStatus" style="font-size: 13px; margin-bottom: 10px;">Checking status...</div>
-            <div id="wigleForm" style="display:none;">
-                <div class="form-group">
-                    <label>API Name</label>
-                    <input type="text" id="wigleName">
-                </div>
-                <div class="form-group">
-                    <label>API Token</label>
-                    <input type="password" id="wigleToken">
-                </div>
-                <button class="action-btn" onclick="wigleLogin()">Sign In</button>
-            </div>
-            <div id="wigleInfo" style="display:none;">
-                <span>Account: <b id="wigleUserLabel"></b></span>
-                <button class="action-btn" style="margin-left: 20px; padding: 5px 10px; font-size: 11px;" onclick="wigleLogout()">Sign Out</button>
-            </div>
+            <h2>WEBHOOK_CONFIG</h2>
+            <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+            <button class="action-btn" onclick="saveWebhook()">UPDATE</button>
         </div>
-
-        <div class="card">
-            <h2>WARDRIVE :: SESSIONS</h2>
-            <div id="wardriveList" class="list-container"></div>
-        </div>
-    </div>
-
-    <!-- TERMINAL PANEL -->
-    <!-- SHOP PANEL -->
-    <div id="shop" class="tab-panel">
-        <div class="card">
-            <h2>BOXSHOP :: PAYLOAD CATALOG</h2>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <button class="action-btn" onclick="refreshShop()">Refresh Catalog</button>
-                <span id="shopStatus" style="font-size: 12px; color: var(--fg-dim);"></span>
-            </div>
-            <div id="shopList" class="list-container"></div>
-            <p style="font-size: 11px; color: var(--fg-dim); margin-top: 15px;">
-                Catalog source: <a href="https://github.com/darkLabz001/boxshop" target="_blank" style="color: var(--fg-dim);">github.com/darkLabz001/boxshop</a>
-                — submit a PR there to contribute a payload.
-            </p>
-        </div>
-    </div>
-
-    <div id="terminal" class="tab-panel" style="padding: 0;">
-        <div id="terminal-container"></div>
-    </div>
-
-    <!-- SETTINGS PANEL -->
-    <div id="settings" class="tab-panel">
-        <div class="card">
-            <h2>SYSTEM :: WEBHOOK</h2>
-            <div class="form-group">
-                <label>Discord / Slack / Generic Webhook URL</label>
-                <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
-            </div>
-            <button class="action-btn" onclick="saveWebhook()">Save Webhook</button>
-            <span id="webhookStatus" style="font-size: 12px; margin-left: 15px; color: var(--fg-dim);"></span>
-            <p style="font-size: 11px; color: var(--fg-dim); margin-top: 15px;">
-                Captures can be shared via this webhook from the "View Captures" menu on the device.
-            </p>
-        </div>
+        <div class="card"><h2>RETRO_AUTH</h2><div id="raAuth" style="font-size: 13px;">...</div></div>
     </div>
 </main>
 
 <script>
-    // --- Tabs ---
-    function showTab(tabId) {
+    let activeTab = 'dashboard';
+    let map, mapMarker;
+
+    function showTab(id) {
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
-        
-        if (tabId === 'terminal') {
-            initTerminal();
-        }
-        if (tabId === 'shop') {
-            refreshShopList();
-        }
+        document.getElementById(id).classList.add('active');
+        const btn = document.querySelector(`[onclick="showTab('${id}')"]`);
+        if (btn) btn.classList.add('active');
+        activeTab = id;
+
+        if (id === 'terminal') initTerminal();
+        if (id === 'library') refreshLibrary();
+        if (id === 'wardrive') { refreshWardrive(); initMap(); }
+        if (id === 'shop') refreshShopList();
+        if (id === 'settings') { refreshWebhook(); checkAuth(); }
     }
 
-    // --- Remote ---
-    function press(btn) {
-        fetch('/press/' + btn).catch(() => {});
+    async function refreshStats() {
+        try {
+            const r = await fetch('/system/stats');
+            const data = await r.json();
+            document.getElementById('head-cpu').innerText = data.cpu_usage.toFixed(0) + '%';
+            document.getElementById('head-mem').innerText = data.mem_usage.toFixed(0) + '%';
+            document.getElementById('head-bat').innerText = (data.battery ? data.battery.percent : '--') + '%';
+            document.getElementById('val-cpu').innerText = data.cpu_usage.toFixed(1) + '%';
+            document.getElementById('bar-cpu').style.width = data.cpu_usage + '%';
+            document.getElementById('val-mem').innerText = data.mem_usage.toFixed(1) + '%';
+            document.getElementById('bar-mem').style.width = data.mem_usage + '%';
+            document.getElementById('val-disk').innerText = data.disk_usage.toFixed(1) + '%';
+            document.getElementById('bar-disk').style.width = data.disk_usage + '%';
+            document.getElementById('val-temp').innerText = (data.temp_f || 0).toFixed(1) + '°F';
+            document.getElementById('bar-temp').style.width = Math.min(100, (data.temp_f - 60) * 2) + '%';
+            document.getElementById('val-ssid').innerText = data.wifi.ssid || 'OFFLINE';
+            document.getElementById('val-wifi').innerText = data.wifi.signal || '--';
+            document.getElementById('bar-wifi').style.width = (data.wifi.signal || 0) + '%';
+        } catch(e) {}
     }
 
-    // --- Terminal ---
+    async function refreshActivity() {
+        try {
+            const r = await fetch('/system/activity');
+            const data = await r.json();
+            const log = document.getElementById('activityLog');
+            log.innerHTML = data.reverse().map(e => `
+                <div class="activity-entry">
+                    <span class="activity-ts">[${new Date(e.ts*1000).toLocaleTimeString()}]</span>
+                    ${e.message}
+                </div>
+            `).join('');
+        } catch(e) {}
+    }
+
+    async function refreshGPS() {
+        try {
+            const r = await fetch('/gps/current');
+            const data = await r.json();
+            const status = document.getElementById('gps-status');
+            if (data.has_fix) {
+                status.innerText = `FIX: ${data.lat.toFixed(5)}, ${data.lon.toFixed(5)} (${data.sats} SATS)`;
+                status.style.color = '#5ae6aa';
+                if (map) {
+                    const pos = [data.lat, data.lon];
+                    if (!mapMarker) {
+                        mapMarker = L.circleMarker(pos, { color: '#fff', radius: 8, fillOpacity: 1 }).addTo(map);
+                        map.setView(pos, 15);
+                    } else {
+                        mapMarker.setLatLng(pos);
+                        if (activeTab === 'wardrive') map.panTo(pos);
+                    }
+                }
+            } else {
+                status.innerText = 'WAITING FOR FIX';
+                status.style.color = 'var(--err)';
+            }
+        } catch(e) {}
+    }
+
+    function initMap() {
+        if (map) return;
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0,0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    }
+
+    async function refreshTasks() {
+        try {
+            const r = await fetch('/tasks');
+            const data = await r.json();
+            const list = document.getElementById('taskList');
+            if (data.length === 0) { list.innerHTML = '<div style="color:var(--fg-dim); font-size: 11px; text-align: center; padding: 20px;">NOMINAL</div>'; return; }
+            list.innerHTML = data.map(t => `
+                <div class="task-item">
+                    <div class="task-info"><span class="task-label">${t.label}</span><span class="task-meta">${t.section} • ${formatAge(t.age_seconds)}</span></div>
+                    <button class="task-stop" onclick="stopTask('${t.id}')">STOP</button>
+                </div>
+            `).join('');
+        } catch(e) {}
+    }
+
+    function formatAge(s) { if (s < 60) return Math.floor(s) + 's'; if (s < 3600) return Math.floor(s/60) + 'm'; return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm'; }
+    async function stopTask(id) { await fetch('/tasks/stop/' + id, { method: 'POST' }); refreshTasks(); }
+    async function stopAllTasks() { if (confirm('Abort all operations?')) { await fetch('/tasks/stop_all', { method: 'POST' }); refreshTasks(); } }
+
+    function press(btn) { fetch('/press/' + btn).catch(() => {}); }
+    async function doReboot() { if (confirm('Initiate system reboot?')) await fetch('/system/reboot', { method: 'POST' }); }
+    async function doPoweroff() { if (confirm('Initiate system shutdown?')) await fetch('/system/poweroff', { method: 'POST' }); }
+
     let term, termWs, fitAddon;
     function initTerminal() {
-        if (term) {
-            fitAddon.fit();
-            return;
-        }
-        
-        term = new Terminal({
-            theme: {
-                background: '#000000',
-                foreground: '#ffffff',
-                cursor: '#ffffff',
-                selectionBackground: 'rgba(255, 255, 255, 0.3)'
-            },
-            fontFamily: 'monospace',
-            fontSize: 14,
-            cursorBlink: true
-        });
-        
-        fitAddon = new FitAddon.FitAddon();
-        term.loadAddon(fitAddon);
-        term.open(document.getElementById('terminal-container'));
-        fitAddon.fit();
-
+        if (term) { fitAddon.fit(); return; }
+        term = new Terminal({ theme: { background: '#000000', foreground: '#ffffff', cursor: '#ffffff' }, fontFamily: 'monospace', fontSize: 14, cursorBlink: true });
+        fitAddon = new FitAddon.FitAddon(); term.loadAddon(fitAddon); term.open(document.getElementById('terminal-container')); fitAddon.fit();
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         termWs = new WebSocket(`${protocol}//${window.location.host}/ws/terminal`);
-        
-        termWs.onopen = () => {
-            const dims = { type: 'resize', rows: term.rows, cols: term.cols };
-            termWs.send(JSON.stringify(dims));
-        };
-
-        termWs.onmessage = async (ev) => {
-            const data = await ev.data.arrayBuffer();
-            term.write(new Uint8Array(data));
-        };
-
-        term.onData(data => {
-            if (termWs.readyState === WebSocket.OPEN) {
-                termWs.send(JSON.stringify({ type: 'input', data: data }));
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            fitAddon.fit();
-            if (termWs.readyState === WebSocket.OPEN) {
-                termWs.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols }));
-            }
-        });
+        termWs.onopen = () => termWs.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols }));
+        termWs.onmessage = async (ev) => { const data = await ev.data.arrayBuffer(); term.write(new Uint8Array(data)); };
+        term.onData(data => { if (termWs.readyState === 1) termWs.send(JSON.stringify({ type: 'input', data: data })); });
+        window.addEventListener('resize', () => { fitAddon.fit(); if (termWs.readyState === 1) termWs.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols })); });
     }
 
-    // --- Library (ROMs & Media) ---
-    function refreshLibrary() {
-        // ROMs
-        fetch('/roms').then(r => r.json()).then(data => {
-            const list = document.getElementById('romList');
-            let html = '';
-            
-            const systemLabels = {
-                'gbc': 'GAME BOY / GBC',
-                'gba': 'GAME BOY ADVANCE',
-                'ps1': 'PLAYSTATION 1',
-                'ps1-bios': 'PS1 BIOS'
-            };
-
-            ['gbc', 'gba', 'ps1', 'ps1-bios'].forEach(sys => {
-                const items = data[sys] || [];
-                if (items.length || sys !== 'ps1-bios') {
-                    html += `<div style="color:var(--fg-dim); margin: 10px 0 5px; font-weight: bold;">${systemLabels[sys]}</div>`;
-                    if (items.length === 0) {
-                        html += `<div style="color:#444; font-size: 11px; margin-left: 10px; margin-bottom: 10px;">No files found.</div>`;
-                    }
-                    items.forEach(f => {
-                        html += `<div class="list-item" style="margin-left: 10px;">
-                            <span>${f}</span>
-                            <a href="#" style="color:var(--err)" onclick="deleteRom('${sys}','${encodeURIComponent(f)}')">[DELETE]</a>
-                        </div>`;
-                    });
-                }
-            });
-            list.innerHTML = html || '<div style="color:var(--fg-dim)">No game data found.</div>';
-        });
-
-        // Media
-        fetch('/media').then(r => r.json()).then(data => {
-            const list = document.getElementById('mediaList');
-            let html = '';
-            ['movies', 'tv'].forEach(cat => {
-                const items = data[cat] || [];
-                if (items.length) {
-                    html += `<div style="color:var(--fg-dim); margin: 10px 0 5px; font-weight: bold;">${cat.toUpperCase()}</div>`;
-                    items.forEach(f => {
-                        html += `<div class="list-item" style="margin-left: 10px;"><span>${f}</span></div>`;
-                    });
-                }
-            });
-            list.innerHTML = html || '<div style="color:var(--fg-dim)">No media files found.</div>';
-        });
+    async function refreshLibrary() {
+        const romR = await fetch('/roms'); const roms = await romR.json();
+        document.getElementById('romList').innerHTML = Object.entries(roms).map(([sys, files]) => {
+            if (sys === 'ps1-bios') return '';
+            return files.map(f => `<div class="list-item"><span><small style="color:var(--fg-dim)">[${sys.toUpperCase()}]</small> ${f}</span><button class="task-stop" onclick="deleteRom('${sys}','${f}')">DEL</button></div>`).join('');
+        }).join('');
+        const medR = await fetch('/media'); const media = await medR.json();
+        document.getElementById('mediaList').innerHTML = Object.entries(media).map(([cat, files]) => {
+            return files.map(f => `<div class="list-item"><span><small style="color:var(--fg-dim)">[${cat.toUpperCase()}]</small> ${f}</span></div>`).join('');
+        }).join('');
     }
-
-    document.getElementById('romInput').onchange = function() {
-        const sys = document.getElementById('romSystem').value;
-        uploadFile(this.files[0], 'roms', 'romStatus', sys);
-        this.value = '';
-    };
-    document.getElementById('mediaInput').onchange = function() {
-        uploadFile(this.files[0], 'media', 'mediaStatus', document.getElementById('mediaFolder').value);
-        this.value = '';
-    };
-
-    function uploadFile(file, type, statusId, target) {
-        if (!file) return;
-        const status = document.getElementById(statusId);
-        status.innerText = `UPLOADING ${file.name}...`;
-        
-        const fd = new FormData();
-        fd.append('file', file);
-        
-        let url = '';
-        if (type === 'roms') {
-            fd.append('system', target);
-            url = '/roms/upload';
-        } else {
-            fd.append('folder', target);
-            url = '/upload';
-        }
-
-        fetch(url, { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                status.innerText = data.status === 'uploaded' ? 'SUCCESS' : 'FAILED';
-                refreshLibrary();
-                setTimeout(() => status.innerText = '', 3000);
-            })
-            .catch(() => { status.innerText = 'ERROR'; });
+    document.getElementById('romInput').onchange = e => upload(e.target.files[0], 'roms', document.getElementById('romSystem').value);
+    document.getElementById('mediaInput').onchange = e => upload(e.target.files[0], 'media', document.getElementById('mediaFolder').value);
+    async function upload(file, type, target) {
+        if (!file) return; const fd = new FormData(); fd.append('file', file); let url = type === 'roms' ? '/roms/upload' : '/upload';
+        if (type === 'roms') fd.append('system', target); else fd.append('folder', target);
+        await fetch(url, { method: 'POST', body: fd }); refreshLibrary();
     }
+    async function deleteRom(sys, name) { if (confirm('Purge?')) { await fetch(`/roms/${sys}/${encodeURIComponent(name)}`, { method: 'DELETE' }); refreshLibrary(); } }
 
-    function deleteRom(sys, name) {
-        if (!confirm('Delete ROM?')) return;
-        fetch(`/roms/${sys}/${name}`, { method: 'DELETE' }).then(() => refreshLibrary());
+    async function refreshWardrive() {
+        const r = await fetch('/wardrive/files'); const data = await r.json();
+        document.getElementById('wardriveList').innerHTML = data.files.map(f => `<div class="list-item"><span>${f.name} <small style="color:var(--fg-dim)">(${(f.size/1024).toFixed(0)}K)</small></span><button class="action-btn" style="padding: 2px 8px; font-size: 10px;" onclick="uploadWardrive('${f.name}', this)">RELAY</button></div>`).join('') || '<div style="color:var(--fg-dim); padding:10px;">EMPTY</div>';
     }
+    async function uploadWardrive(name, btn) { btn.innerText = '...'; const r = await fetch('/wardrive/upload/' + encodeURIComponent(name), { method: 'POST' }); btn.innerText = r.ok ? 'OK' : 'FAIL'; }
 
-    // --- Shop ---
-    function refreshShopList() {
-        fetch('/shop').then(r => r.json()).then(data => {
-            const list = document.getElementById('shopList');
-            const items = data.items || [];
-            if (!items.length) {
-                list.innerHTML = '<div style="color:var(--fg-dim)">No catalog cached. Click Refresh.</div>';
-                return;
-            }
-            let html = '';
-            items.forEach(it => {
-                const installed = it.installed;
-                const trusted = it.trusted;
-                const tagBadge = `<span style="font-size:10px;color:var(--fg-dim);margin-right:8px;">[${(it.type||'?').toUpperCase()}]</span>`;
-                const installedBadge = installed
-                    ? '<span style="font-size:10px;color:#5ae6aa;margin-left:8px;">INSTALLED</span>' : '';
-                const trustBadge = !trusted
-                    ? '<span style="font-size:10px;color:#f0b446;margin-left:8px;">UNVERIFIED</span>' : '';
-                const btn = installed
-                    ? `<button class="action-btn" style="padding:2px 10px;font-size:11px;" onclick="uninstallShop('${it.id}')">REMOVE</button>`
-                    : `<button class="action-btn" style="padding:2px 10px;font-size:11px;" onclick="installShop('${it.id}')">INSTALL</button>`;
-                html += `<div class="list-item">
-                    <span>${tagBadge}${it.name} <small style="color:var(--fg-dim)">v${it.version} — ${it.summary||''}</small>${installedBadge}${trustBadge}</span>
-                    ${btn}
-                </div>`;
-            });
-            list.innerHTML = html;
-        });
+    async function refreshShopList() {
+        const r = await fetch('/shop'); const data = await r.json();
+        document.getElementById('shopList').innerHTML = data.items.map(it => `
+            <div class="list-item">
+                <div class="task-info"><span class="task-label">${it.name} ${it.installed ? '<small style="color:var(--ok)">[INSTALLED]</small>' : ''}</span><span class="task-meta">${it.summary}</span></div>
+                <button class="action-btn" style="padding: 2px 10px; font-size: 10px;" onclick="${it.installed ? 'uninstall' : 'install'}Shop('${it.id}')">${it.installed ? 'PURGE' : 'DEPLOY'}</button>
+            </div>
+        `).join('');
     }
+    async function refreshShop() { await fetch('/shop/refresh', { method: 'POST' }); refreshShopList(); }
+    async function installShop(id) { await fetch('/shop/install/' + id, { method: 'POST' }); refreshShopList(); }
+    async function uninstallShop(id) { if (confirm('Purge payload?')) { await fetch('/shop/install/' + id, { method: 'DELETE' }); refreshShopList(); } }
 
-    function refreshShop() {
-        const status = document.getElementById('shopStatus');
-        status.innerText = 'Refreshing...';
-        fetch('/shop/refresh', { method: 'POST' })
-            .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
-            .then(({ ok, body }) => {
-                status.innerText = ok ? body.message : ('FAIL: ' + (body.detail || 'error'));
-                refreshShopList();
-                setTimeout(() => status.innerText = '', 4000);
-            })
-            .catch(() => { status.innerText = 'NETWORK ERROR'; });
+    async function checkAuth() {
+        const wigle = await (await fetch('/wigle/status')).json();
+        document.getElementById('wigleAuth').innerHTML = wigle.logged_in ? `LOGGED_IN: <b>${wigle.api_name}</b> <button class="task-stop" onclick="logout('wigle')">DISCONNECT</button>` : 'OFFLINE';
+        const ra = await (await fetch('/retroachievements/status')).json();
+        document.getElementById('raAuth').innerHTML = ra.logged_in ? `LOGGED_IN: <b>${ra.username}</b> <button class="task-stop" onclick="logout('ra')">DISCONNECT</button>` : 'OFFLINE';
     }
+    async function logout(sys) { await fetch(sys === 'wigle' ? '/wigle/logout' : '/retroachievements/logout', { method: 'POST' }); checkAuth(); }
+    async function refreshWebhook() { const data = await (await fetch('/webhook/status')).json(); document.getElementById('webhookUrl').value = data.url; }
+    async function saveWebhook() { const fd = new FormData(); fd.append('url', document.getElementById('webhookUrl').value); await fetch('/webhook/save', { method: 'POST', body: fd }); }
 
-    function installShop(id) {
-        const status = document.getElementById('shopStatus');
-        status.innerText = `Installing ${id}...`;
-        fetch('/shop/install/' + encodeURIComponent(id), { method: 'POST' })
-            .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
-            .then(({ ok, body }) => {
-                status.innerText = ok ? ('Installed: ' + body.message) : ('FAIL: ' + (body.detail || 'error'));
-                refreshShopList();
-                setTimeout(() => status.innerText = '', 4000);
-            })
-            .catch(() => { status.innerText = 'NETWORK ERROR'; });
-    }
-
-    function uninstallShop(id) {
-        if (!confirm(`Remove ${id}?`)) return;
-        const status = document.getElementById('shopStatus');
-        status.innerText = `Removing ${id}...`;
-        fetch('/shop/install/' + encodeURIComponent(id), { method: 'DELETE' })
-            .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
-            .then(({ ok, body }) => {
-                status.innerText = ok ? ('Removed: ' + body.message) : ('FAIL: ' + (body.detail || 'error'));
-                refreshShopList();
-                setTimeout(() => status.innerText = '', 4000);
-            })
-            .catch(() => { status.innerText = 'NETWORK ERROR'; });
-    }
-
-    // --- Wardrive ---
-    function refreshWardrive() {
-        fetch('/wardrive/files').then(r => r.json()).then(data => {
-            const list = document.getElementById('wardriveList');
-            let html = '';
-            (data.files || []).forEach(f => {
-                html += `<div class="list-item">
-                    <span>${f.name} <small style="color:var(--fg-dim)">(${(f.size/1024).toFixed(1)} KB)</small></span>
-                    <button class="action-btn" style="padding: 2px 8px; font-size: 10px;" onclick="uploadWardrive('${f.name}', this)">WIGLE UPLOAD</button>
-                </div>`;
-            });
-            list.innerHTML = html || '<div style="color:var(--fg-dim)">No sessions found.</div>';
-        });
-    }
-
-    function uploadWardrive(name, btn) {
-        btn.disabled = true;
-        btn.innerText = '...';
-        fetch('/wardrive/upload/' + encodeURIComponent(name), { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
-                btn.innerText = data.status === 'uploaded' ? 'OK' : 'FAIL';
-            })
-            .catch(() => btn.innerText = 'ERR');
-    }
-
-    // --- WiGLE / RA Auth ---
-    function checkAuth() {
-        fetch('/wigle/status').then(r => r.json()).then(data => {
-            document.getElementById('wigleForm').style.display = data.logged_in ? 'none' : 'block';
-            document.getElementById('wigleInfo').style.display = data.logged_in ? 'block' : 'none';
-            document.getElementById('wigleStatus').innerText = data.logged_in ? 'Connected to WiGLE' : 'Offline';
-            if (data.logged_in) document.getElementById('wigleUserLabel').innerText = data.api_name;
-        });
-        fetch('/retroachievements/status').then(r => r.json()).then(data => {
-            document.getElementById('raForm').style.display = data.logged_in ? 'none' : 'block';
-            document.getElementById('raInfo').style.display = data.logged_in ? 'block' : 'none';
-            document.getElementById('raStatus').innerText = data.logged_in ? 'RA Connected' : 'RA Offline';
-            if (data.logged_in) document.getElementById('raUserLabel').innerText = data.username;
-        });
-    }
-
-    function wigleLogin() {
-        const fd = new FormData();
-        fd.append('api_name', document.getElementById('wigleName').value);
-        fd.append('api_token', document.getElementById('wigleToken').value);
-        fetch('/wigle/login', { method: 'POST', body: fd }).then(() => checkAuth());
-    }
-    function wigleLogout() { fetch('/wigle/logout', { method: 'POST' }).then(() => checkAuth()); }
-    
-    function raLogin() {
-        const fd = new FormData();
-        fd.append('username', document.getElementById('raUser').value);
-        fd.append('password', document.getElementById('raPass').value);
-        fetch('/retroachievements/login', { method: 'POST', body: fd }).then(() => checkAuth());
-    }
-    function raLogout() { fetch('/retroachievements/logout', { method: 'POST' }).then(() => checkAuth()); }
-
-    // --- Webhook ---
-    function refreshWebhook() {
-        fetch('/webhook/status').then(r => r.json()).then(data => {
-            document.getElementById('webhookUrl').value = data.url;
-        });
-    }
-
-    function saveWebhook() {
-        const url = document.getElementById('webhookUrl').value;
-        const status = document.getElementById('webhookStatus');
-        status.innerText = 'SAVING...';
-        
-        const fd = new FormData();
-        fd.append('url', url);
-        
-        fetch('/webhook/save', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                status.innerText = 'SAVED';
-                setTimeout(() => status.innerText = '', 2000);
-            })
-            .catch(() => { status.innerText = 'ERROR'; });
-    }
-
-    // --- Init ---
-    refreshLibrary();
-    refreshWardrive();
-    checkAuth();
-    refreshWebhook();
+    setInterval(refreshStats, 2000); 
+    setInterval(refreshTasks, 3000);
+    setInterval(refreshActivity, 2000);
+    setInterval(refreshGPS, 2000);
+    refreshStats(); refreshTasks(); refreshActivity(); refreshGPS();
 </script>
 
 </body>

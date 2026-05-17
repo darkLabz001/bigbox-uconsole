@@ -314,10 +314,26 @@ def _idle_menu(ctx: SectionContext) -> None:
     ])
 
 
+def _hardware_menu(ctx: SectionContext) -> None:
+    from bigbox import hardware
+    
+    def toggle_prefer_usb():
+        new_val = not hardware.PREFER_USB_WIFI
+        hardware.set_prefer_usb_wifi(new_val)
+        ctx.toast(f"Prefer External Wi-Fi: {'ON' if new_val else 'OFF'}")
+        ctx.go_back()
+
+    actions = [
+        (f"Prefer External Wi-Fi: {'ON' if hardware.PREFER_USB_WIFI else 'OFF'}", toggle_prefer_usb),
+    ]
+    ctx.show_menu("Hardware Settings", actions)
+
+
 def _system_menu(ctx: SectionContext) -> None:
     ctx.show_menu("System", [
         ("Bash Terminal",          lambda: ctx.show_terminal()),
         ("Theme Manager",          lambda: ctx.show_theme_manager()),
+        ("Hardware Config",        lambda: _hardware_menu(ctx)),
         ("Toolbox",                lambda: _toolbox_menu(ctx)),
         ("Check for updates (OTA)", lambda: _update(ctx)),
     ])
