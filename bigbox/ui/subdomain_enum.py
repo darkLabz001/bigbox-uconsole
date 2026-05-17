@@ -11,12 +11,20 @@ user can stop it from the Tasks view.
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import socket
 import subprocess
 import threading
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+try:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except Exception:
+    pass
 
 import pygame
 
@@ -59,11 +67,14 @@ class SubdomainEnumView:
         self.scroll = 0
         self.selected_idx = 0
         
-        # Detail view state
+        # Detail view state. _detail_lock guards mutation of detail_ports /
+        # detail_info from the worker thread vs iteration in render().
         self.detail_target: dict | None = None
         self.detail_status = ""
         self.detail_ports: list[str] = []
         self.detail_info: list[str] = []
+        self._detail_lock = threading.Lock()
+        self._detail_worker_busy = False
 
     def handle(self, ev: ButtonEvent, ctx: "App") -> None:
         if not ev.pressed:
@@ -117,43 +128,60 @@ class SubdomainEnumView:
         self.phase = PHASE_DETAIL
         self.detail_target = target
         self.detail_status = "Probing target..."
-        self.detail_ports = []
-        self.detail_info = []
-        
-        # Auto-start a quick port scan
+        with self._detail_lock:
+            self.detail_ports = []
+            self.detail_info = []
+
+        # Guard against re-entering detail (or tapping A repeatedly) while a
+        # previous probe is still running — would spawn unbounded nmap procs.
+        if self._detail_worker_busy:
+            return
+        self._detail_worker_busy = True
         threading.Thread(target=self._detail_probe_worker, args=(target,), daemon=True).start()
 
     def _detail_probe_worker(self, target: dict) -> None:
-        ip = target.get("ip")
-        if not ip or ip == "nxdomain":
-            self.detail_status = "Error: Invalid IP"
-            return
-            
-        # 1. Quick Nmap Scan (Common ports)
-        self.detail_status = "Nmap scanning (top 100)..."
         try:
-            cmd = ["nmap", "-F", "--top-ports", "100", "--open", ip]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            for line in res.stdout.splitlines():
-                if "/tcp" in line and "open" in line:
-                    self.detail_ports.append(line.strip())
-        except Exception as e:
-            self.detail_info.append(f"Nmap error: {e}")
+            ip = target.get("ip")
+            if not ip or ip == "nxdomain":
+                self.detail_status = "Error: Invalid IP"
+                return
 
-        # 2. HTTP Banner Probe
-        self.detail_status = "Probing HTTP banners..."
-        try:
-            import requests
-            scheme = "https" if "https" in target.get("status", "") else "http"
-            url = f"{scheme}://{target['sub']}"
-            r = requests.get(url, timeout=5, verify=False, allow_redirects=True)
-            self.detail_info.append(f"Title: {self._get_title(r.text)}")
-            self.detail_info.append(f"Server: {r.headers.get('Server', 'unknown')}")
-            self.detail_info.append(f"Powered-By: {r.headers.get('X-Powered-By', 'unknown')}")
-        except Exception as e:
-            self.detail_info.append(f"HTTP probe failed: {e}")
-            
-        self.detail_status = "Tactical Ready"
+            if not shutil.which("nmap"):
+                with self._detail_lock:
+                    self.detail_info.append("nmap not installed — skipping port scan")
+            else:
+                self.detail_status = "Nmap scanning (top 100)..."
+                try:
+                    cmd = ["nmap", "-F", "--top-ports", "100", "--open", ip]
+                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                    with self._detail_lock:
+                        for line in res.stdout.splitlines():
+                            if "/tcp" in line and "open" in line:
+                                self.detail_ports.append(line.strip())
+                except subprocess.TimeoutExpired:
+                    with self._detail_lock:
+                        self.detail_info.append("Nmap timed out after 30s")
+                except Exception as e:
+                    with self._detail_lock:
+                        self.detail_info.append(f"Nmap error: {e}")
+
+            self.detail_status = "Probing HTTP banners..."
+            try:
+                import requests
+                scheme = "https" if "https" in target.get("status", "") else "http"
+                url = f"{scheme}://{target['sub']}"
+                r = requests.get(url, timeout=5, verify=False, allow_redirects=True)
+                with self._detail_lock:
+                    self.detail_info.append(f"Title: {self._get_title(r.text)}")
+                    self.detail_info.append(f"Server: {r.headers.get('Server', 'unknown')}")
+                    self.detail_info.append(f"Powered-By: {r.headers.get('X-Powered-By', 'unknown')}")
+            except Exception as e:
+                with self._detail_lock:
+                    self.detail_info.append(f"HTTP probe failed: {e}")
+
+            self.detail_status = "Tactical Ready"
+        finally:
+            self._detail_worker_busy = False
 
     def _get_title(self, html: str) -> str:
         import re
@@ -242,21 +270,25 @@ class SubdomainEnumView:
             return
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        def probe(s: str) -> tuple[str, str]:
-            import socket
+        def probe(s: str) -> tuple[str, str, str]:
+            # Returns (sub, ip, status_string). Caller stores ip on the result
+            # dict so the detail view can use it without re-parsing status.
             try:
+                # gethostbyname has no timeout kwarg; use a thread-local socket
+                # default so a stalled resolver can't pin a worker forever.
+                socket.setdefaulttimeout(3)
                 ip = socket.gethostbyname(s)
             except Exception:
-                return s, "nxdomain"
-                
+                return s, "", "nxdomain"
+
             for scheme in ("https", "http"):
                 try:
                     r = requests.head(f"{scheme}://{s}", timeout=4,
-                                      allow_redirects=True)
-                    return s, f"{ip} [{scheme} {r.status_code}]"
+                                      allow_redirects=True, verify=False)
+                    return s, ip, f"[{scheme} {r.status_code}]"
                 except Exception:
                     continue
-            return s, f"{ip} [down]"
+            return s, ip, "[down]"
 
         index = {r["sub"]: r for r in self.results}
         with ThreadPoolExecutor(max_workers=12) as pool:
@@ -265,12 +297,13 @@ class SubdomainEnumView:
                 if self._stop:
                     break
                 try:
-                    s, status = fut.result()
+                    s, ip, status = fut.result()
                 except Exception:
                     continue
                 rec = index.get(s)
                 if rec:
-                    rec["status"] = status
+                    rec["ip"] = ip
+                    rec["status"] = f"{ip} {status}".strip() if ip else status
 
     def _stop_scan(self) -> None:
         self._stop = True
@@ -315,8 +348,14 @@ class SubdomainEnumView:
             ctx.toast(f"write failed: {e}")
             return
         def _send():
-            ok, msg = webhooks.send_file(str(out))
-            ctx.toast(msg if ok else f"failed: {msg}")
+            try:
+                ok, msg = webhooks.send_file(str(out))
+                ctx.toast(msg if ok else f"failed: {msg}")
+            finally:
+                try:
+                    os.unlink(out)
+                except OSError:
+                    pass
         threading.Thread(target=_send, daemon=True).start()
 
     def _render_text(self) -> str:
@@ -402,27 +441,32 @@ class SubdomainEnumView:
 
         elif self.phase == PHASE_DETAIL:
             t = self.detail_target
+            # Snapshot under the lock so the worker thread can't mutate mid-render.
+            with self._detail_lock:
+                ports_snap = list(self.detail_ports)
+                info_snap = list(self.detail_info)
+
             surf.blit(self.body_font.render(f"TARGET: {t['sub']}", True, theme.ACCENT), (body.x + 16, body.y + 16))
-            surf.blit(self.small_font.render(f"IP: {t.get('ip','unknown')}", True, theme.FG), (body.x + 16, body.y + 44))
-            
+            surf.blit(self.small_font.render(f"IP: {t.get('ip') or 'unknown'}", True, theme.FG), (body.x + 16, body.y + 44))
+
             # Status line
             status_col = theme.WARN if "ready" not in self.detail_status.lower() else (100, 255, 100)
             surf.blit(self.small_font.render(f"STATUS: {self.detail_status}", True, status_col), (body.x + 16, body.y + 64))
-            
+
             # Ports Column
             pygame.draw.rect(surf, (10, 15, 20), (body.x + 10, body.y + 90, 180, 150))
             pygame.draw.rect(surf, theme.DIVIDER, (body.x + 10, body.y + 90, 180, 150), 1)
             surf.blit(self.small_font.render("OPEN PORTS", True, theme.ACCENT_DIM), (body.x + 15, body.y + 95))
-            for i, p in enumerate(self.detail_ports[:7]):
+            for i, p in enumerate(ports_snap[:7]):
                 surf.blit(self.small_font.render(p, True, (100, 255, 100)), (body.x + 15, body.y + 115 + i * 18))
-            if not self.detail_ports:
+            if not ports_snap:
                 surf.blit(self.small_font.render("Scanning...", True, (60, 60, 60)), (body.x + 15, body.y + 115))
 
             # Info Column
             pygame.draw.rect(surf, (15, 10, 20), (body.x + 200, body.y + 90, 360, 150))
             pygame.draw.rect(surf, theme.DIVIDER, (body.x + 200, body.y + 90, 360, 150), 1)
             surf.blit(self.small_font.render("HTTP ENUM", True, theme.ACCENT_DIM), (body.x + 205, body.y + 95))
-            for i, info in enumerate(self.detail_info[:7]):
+            for i, info in enumerate(info_snap[:7]):
                 surf.blit(self.small_font.render(info[:45], True, theme.FG), (body.x + 205, body.y + 115 + i * 18))
 
         # Footer hints
