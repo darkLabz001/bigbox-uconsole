@@ -55,17 +55,54 @@ if ! command -v tailscale >/dev/null 2>&1; then
     curl -fsSL https://tailscale.com/install.sh | sh
 fi
 
-# --- 2. copy source to /opt/bigbox -------------------------------------------
-echo "==> copy source -> $INSTALL_DIR"
+# --- 2. deploy source to /opt/bigbox -----------------------------------------
+# The deployed copy MUST be a git checkout of $REPO_URL so OTA's `git fetch
+# origin` has somewhere to fetch from. Set BIGBOX_REPO_URL to point at a
+# fork.
+REPO_URL="${BIGBOX_REPO_URL:-https://github.com/darkLabz001/bigbox-uconsole.git}"
+echo "==> deploy source -> $INSTALL_DIR (origin: $REPO_URL)"
 mkdir -p "$INSTALL_DIR"
-# Skip the copy if we're already running from $INSTALL_DIR (sdcard-prepare
-# pre-stages the source there, so install.sh would self-copy).
+
+# Mirror source -> /opt/bigbox. Preserve .git when the source has one so the
+# deployed copy is also a git checkout. (Skip the copy if we're already
+# running from $INSTALL_DIR — sdcard-prepare pre-stages source there and we
+# would self-copy.)
 if [[ "$REPO_DIR" != "$INSTALL_DIR" ]]; then
-    rsync -a --delete \
-        --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
-        --exclude='.claude' --exclude='.vscode' --exclude='.idea' \
-        --exclude='memory' \
-        "$REPO_DIR"/ "$INSTALL_DIR"/
+    EXCLUDES=(--exclude='.venv' --exclude='__pycache__'
+              --exclude='.claude' --exclude='.vscode' --exclude='.idea'
+              --exclude='memory')
+    [[ -d "$REPO_DIR/.git" ]] || EXCLUDES+=(--exclude='.git')
+    rsync -a --delete "${EXCLUDES[@]}" "$REPO_DIR"/ "$INSTALL_DIR"/
+fi
+
+# Make sure /opt/bigbox is a git checkout pointing at the right remote.
+# safe.directory: lets root operate on the tree even if the working copy
+# was checked out by another user.
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
+
+if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+    echo "==> initializing git checkout for OTA"
+    pushd "$INSTALL_DIR" >/dev/null
+    git init -q
+    git remote add origin "$REPO_URL"
+    git fetch --quiet origin main
+    git reset --hard origin/main
+    git branch --set-upstream-to=origin/main main 2>/dev/null \
+        || git checkout -B main --track origin/main
+    popd >/dev/null
+else
+    # Already a git checkout — make sure origin points at the expected
+    # remote (lets a user retarget by re-running install.sh with a
+    # BIGBOX_REPO_URL override).
+    CUR_ORIGIN="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
+    if [[ "$CUR_ORIGIN" != "$REPO_URL" ]]; then
+        echo "==> retargeting origin: $CUR_ORIGIN -> $REPO_URL"
+        if [[ -n "$CUR_ORIGIN" ]]; then
+            git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL"
+        else
+            git -C "$INSTALL_DIR" remote add origin "$REPO_URL"
+        fi
+    fi
 fi
 
 # --- 3. python venv (system pygame is fine; venv keeps deps isolated) --------

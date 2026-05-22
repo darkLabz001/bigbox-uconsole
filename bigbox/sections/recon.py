@@ -141,7 +141,7 @@ def _phone_osint(ctx: SectionContext) -> None:
 
 
 def _wayback(ctx: SectionContext) -> None:
-    target = "https://github.com/darkLabz001/bigbox"
+    target = "https://github.com/darkLabz001/bigbox-uconsole"
     out = run_capture([
         "sh", "-c",
         f"curl -s --max-time 6 'https://archive.org/wayback/available?url={target}'"

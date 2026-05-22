@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # One-shot: convert /opt/bigbox (rsync-deployed) into a git checkout of
-# darkLabz001/bigbox so OTA updates work. Run once on the Pi after the
-# upstream repo has been pushed and is at-or-ahead of what's deployed.
+# darkLabz001/bigbox-uconsole so OTA updates work. Run once on the uConsole
+# after the upstream repo has been pushed and is at-or-ahead of what's
+# deployed.
 #
 #   sudo /opt/bigbox/scripts/git-init-pi.sh
 #
 # Backs up your current /opt/bigbox into /opt/bigbox.pre-git-<timestamp>
 # before resetting, in case the upstream is missing something.
+#
+# Override the upstream URL with BIGBOX_REPO_URL=... for forks.
 set -euo pipefail
 
-REPO_URL="${BIGBOX_REPO_URL:-https://github.com/darkLabz001/bigbox.git}"
+REPO_URL="${BIGBOX_REPO_URL:-https://github.com/darkLabz001/bigbox-uconsole.git}"
 INSTALL_DIR=/opt/bigbox
 
 if [[ $EUID -ne 0 ]]; then
