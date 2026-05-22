@@ -40,6 +40,7 @@ from bigbox.ui.onion_chat import OnionChatView
 from bigbox.ui.ble_spam import BLESpamView
 from bigbox.ui.terminal import TerminalView
 from bigbox.ui.theme_manager import ThemeManagerView
+from bigbox.ui.button_mapper import ButtonMapperView
 from bigbox.ui.update import UpdateView
 from bigbox.ui.wardrive import WardriveView
 from bigbox.ui.shop import ShopView
@@ -95,6 +96,7 @@ __all__ = [
     "BLESpamView",
     "TerminalView",
     "ThemeManagerView",
+    "ButtonMapperView",
     "UpdateView",
     "WardriveView",
     "ShopView",

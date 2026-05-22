@@ -76,10 +76,30 @@ KEYMAP: dict[int, Button] = {
 def apply_keymap_overrides(overrides: dict[int, Button]) -> None:
     """Merge user-supplied keysym→Button overrides on top of the defaults.
 
-    Called once at startup from app._start_input() so /etc/bigbox/buttons.toml
-    [keymap] entries take precedence over the bundled mappings.
+    Kept for backward compat — new code should prefer set_keymap() when the
+    intent is "replace the entire keymap" (which the in-app Button Mapper
+    needs in order to unbind defaults).
     """
     KEYMAP.update(overrides)
+
+
+# Snapshot of the bundled defaults, captured at import time so the in-app
+# Button Mapper has something to restore when the user picks "Reset to
+# defaults." Never mutated.
+_DEFAULTS: dict[int, Button] = dict(KEYMAP)
+
+
+def default_keymap() -> dict[int, Button]:
+    """Return a fresh copy of the bundled default keymap."""
+    return dict(_DEFAULTS)
+
+
+def set_keymap(km: dict[int, Button]) -> None:
+    """Replace the entire active keymap. Mutates KEYMAP in place so any
+    callers that captured a reference (none today, but keep the invariant)
+    see the change."""
+    KEYMAP.clear()
+    KEYMAP.update(km)
 
 
 def translate(ev: pygame.event.Event, bus: EventBus) -> None:

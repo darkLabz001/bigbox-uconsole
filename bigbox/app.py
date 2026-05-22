@@ -33,7 +33,7 @@ from bigbox.input.keyboard import translate as kbd_translate
 from bigbox.runner import run_streaming
 from bigbox.sections import build_sections
 from bigbox.update_checker import UpdateChecker
-from bigbox.ui import Launcher, CCTVView, MenuView, ResultView, StatusBar, PingSweepView, KeyboardView, ARPScanView, FlockScannerView, WifiConnectView, CamScannerView, WifiAttackView, OfflineCrackerView, DataSniperView, MediaPlayerView, InternetTVView, YouTubeView, TailscaleView, AnonSurfView, VaultView, BettercapView, MailView, MessengerView, RagnarView, SignalScraperView, TrafficCamView, CameraInterceptorView, WifiteView, ChatView, SherlockView, DeadDropView, BBSView, BLEChatView, OnionChatView, BLESpamView, TerminalView, ThemeManagerView, ShopView, UpdateView, WifiMultiToolView, WardriveView, EvilTwinView, GamesView, TrackerView, ProbeSnifferView, BeaconFloodView, KarmaLiteView
+from bigbox.ui import Launcher, CCTVView, MenuView, ResultView, StatusBar, PingSweepView, KeyboardView, ARPScanView, FlockScannerView, WifiConnectView, CamScannerView, WifiAttackView, OfflineCrackerView, DataSniperView, MediaPlayerView, InternetTVView, YouTubeView, TailscaleView, AnonSurfView, VaultView, BettercapView, MailView, MessengerView, RagnarView, SignalScraperView, TrafficCamView, CameraInterceptorView, WifiteView, ChatView, SherlockView, DeadDropView, BBSView, BLEChatView, OnionChatView, BLESpamView, TerminalView, ThemeManagerView, ShopView, UpdateView, WifiMultiToolView, WardriveView, EvilTwinView, GamesView, TrackerView, ProbeSnifferView, BeaconFloodView, KarmaLiteView, ButtonMapperView
 from bigbox.ui.adsb import ADSBView
 from bigbox.ui.pager import PagerView
 from bigbox.ui.mission_report import MissionReportView
@@ -92,6 +92,7 @@ _VIEWS: tuple[tuple[str, int], ...] = (
     ("ble_spam_view", 2),
     ("terminal_view", 2),
     ("theme_manager_view", 2),
+    ("button_mapper_view", 2),
     ("shop_view", 2),
     ("wardrive_view", 2),
     ("harvester_view", 2),
@@ -197,6 +198,13 @@ class App:
         # Screen recording state
         self.recording_proc: subprocess.Popen | None = None
         self.recording_start_time: float = 0.0
+
+        # One-shot raw keysym capture, set by ButtonMapperView while it
+        # waits for the user to press a key to bind. When non-None, the
+        # main event loop hands the next pygame.KEYDOWN's key int to this
+        # callback INSTEAD of routing through kbd_translate, then clears
+        # the slot. ESC during capture passes None to mean "cancelled".
+        self.raw_capture_callback: Callable[[int | None], None] | None = None
 
         # Messaging background sync
         from bigbox.ui.messenger import MessengerSync
@@ -346,11 +354,13 @@ class App:
         # No background thread or hardware init required.
         cfg = load_button_config()
 
-        # Apply any /etc/bigbox/buttons.toml [keymap] overrides on top of
-        # the bundled uConsole defaults.
+        # A non-empty [keymap] in /etc/bigbox/buttons.toml REPLACES the
+        # bundled defaults. This is what lets the in-app Button Mapper
+        # truly own the keymap (including unbinding defaults a user
+        # doesn't want). Empty/missing → defaults stay in place.
         if cfg.keymap:
-            from bigbox.input.keyboard import apply_keymap_overrides
-            apply_keymap_overrides(cfg.keymap)
+            from bigbox.input.keyboard import set_keymap
+            set_keymap(cfg.keymap)
 
         # GPIO is opt-in for users with a custom hat on the uConsole's
         # 40-pin GPIO FPC (CM4/CM5 only — non-Pi cores don't expose it
@@ -625,6 +635,9 @@ class App:
     def show_theme_manager(self) -> None:
         self.theme_manager_view = ThemeManagerView()
 
+    def show_button_mapper(self) -> None:
+        self.button_mapper_view = ButtonMapperView()
+
     def show_shop(self) -> None:
         self.shop_view = ShopView()
 
@@ -682,6 +695,7 @@ class App:
         self.ble_spam_view = None
         self.terminal_view = None
         self.theme_manager_view = None
+        self.button_mapper_view = None
         self.shop_view = None
         self.wardrive_view = None
         self.harvester_view = None
@@ -802,11 +816,23 @@ class App:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     self.running = False
-                elif ev.type in (pygame.KEYDOWN, pygame.KEYUP):
-                    if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                elif ev.type == pygame.KEYDOWN:
+                    # Raw-key capture for the Button Mapper: one-shot
+                    # callback consumes the next KEYDOWN instead of
+                    # routing through kbd_translate. ESC cancels.
+                    if self.raw_capture_callback is not None:
+                        cb = self.raw_capture_callback
+                        self.raw_capture_callback = None
+                        cb(None if ev.key == pygame.K_ESCAPE else ev.key)
+                        continue
+                    if ev.key == pygame.K_ESCAPE:
                         self.running = False
-                    # Always translate keyboard events (supports USB/BLE keyboards on device)
                     kbd_translate(ev, self.bus)
+                elif ev.type == pygame.KEYUP:
+                    # Skip translation while capture mode is active so we
+                    # don't emit a stray Button release for the captured key.
+                    if self.raw_capture_callback is None:
+                        kbd_translate(ev, self.bus)
 
             # 2. Drain logical button events; route to the foreground screen.
             for bev in self.bus.drain():
