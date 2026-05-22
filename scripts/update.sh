@@ -297,6 +297,29 @@ if [ ! -f /usr/share/wordlists/rockyou.txt ]; then
 fi
 echo "PROGRESS: 95"
 
+# --- systemd unit refresh --------------------------------------------------
+# Re-install bigbox.service (and friends) if their on-disk copies in this
+# checkout differ from what's installed under /etc/systemd/system. Without
+# this, ExecStart / Environment changes from a `git pull` never reach the
+# running service unless the user re-runs install.sh manually.
+refresh_unit() {
+    src="$REPO_DIR/scripts/$1"
+    dst="/etc/systemd/system/$1"
+    [ -f "$src" ] || return 0
+    if ! cmp -s "$src" "$dst" 2>/dev/null; then
+        echo "STATUS: Refreshing systemd unit: $1"
+        sudo install -m 0644 "$src" "$dst" >>"$LOG" 2>&1 || return 0
+        UNITS_CHANGED=1
+    fi
+}
+UNITS_CHANGED=0
+refresh_unit bigbox.service
+refresh_unit bigbox-update.service
+refresh_unit bigbox-update.timer
+if [ "$UNITS_CHANGED" = "1" ]; then
+    sudo systemctl daemon-reload >>"$LOG" 2>&1 || true
+fi
+
 # --- service restart -------------------------------------------------------
 # This script is usually invoked as a child of bigbox.service. A direct
 # `systemctl restart bigbox.service` here would kill the whole cgroup,

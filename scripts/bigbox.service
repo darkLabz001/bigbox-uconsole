@@ -19,8 +19,11 @@ Environment=DISPLAY=:0
 WorkingDirectory=/opt/bigbox
 
 # Launch a single-purpose X server on vt1 and run bigbox as its only client.
+# bigbox-xstart.sh rotates the uConsole's portrait panel into landscape before
+# execing the python process. Override the rotation via:
+#   sudo systemctl edit bigbox    # add Environment=BIGBOX_ROTATE=normal|left|right|inverted
 ExecStartPre=-/usr/bin/amixer -c 1 sset "PCM" 100% unmute
-ExecStart=/usr/bin/xinit /opt/bigbox/.venv/bin/python -m bigbox -- :0 vt1 -nocursor -nolisten tcp
+ExecStart=/usr/bin/xinit /opt/bigbox/scripts/bigbox-xstart.sh -- :0 vt1 -nocursor -nolisten tcp
 
 TTYPath=/dev/tty1
 TTYReset=yes
