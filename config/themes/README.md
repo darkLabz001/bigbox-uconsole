@@ -8,7 +8,7 @@ A complete, detailed theme usually consists of a JSON file and an optional asset
 config/themes/
 ├── my_tactical_theme.json      # The main theme definition
 └── my_tactical_theme/          # (Optional) Assets folder
-    ├── background.png          # Recommended: 800x480
+    ├── background.png          # Recommended: 1280x720 (uConsole native)
     └── icons/                  # Your custom icon set
         ├── about.png           # 32px - 64px recommended
         ├── bluetooth.png
@@ -64,7 +64,7 @@ If you provide an `icons_dir`, the system will search that folder for icons matc
 *   **Size**: We recommend **64x64px** for high clarity. The system will automatically scale them to fit the carousel.
 
 ### 3. Background Image
-*   **Size**: **800x480** (GamePi43 native resolution).
+*   **Size**: **1280x720** (uConsole's native 5" IPS panel).
 *   **Style**: Dark, high-contrast images work best. Subtle grid patterns or abstract data-vis textures give a professional tactical feel.
 
 ## 🚀 Installation & Testing
