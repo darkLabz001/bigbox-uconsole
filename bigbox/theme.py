@@ -4,9 +4,9 @@ import json
 import os
 from pathlib import Path
 
-# Designed for the GamePi43's 800x480 panel.
-SCREEN_W = 800
-SCREEN_H = 480
+# Designed for the ClockworkPi uConsole's 5" 1280x720 IPS panel.
+SCREEN_W = 1280
+SCREEN_H = 720
 
 # Default Palette — high-contrast, terminal-ish.
 BG          = (10, 12, 18)
@@ -21,17 +21,17 @@ DIVIDER     = (40, 46, 60)
 SELECTION   = (90, 230, 170)
 SELECTION_BG = (24, 60, 48)
 
-STATUS_BAR_H = 28
-TAB_BAR_H    = 40
-PADDING      = 14
-ROW_H        = 36
+STATUS_BAR_H = 42
+TAB_BAR_H    = 60
+PADDING      = 22
+ROW_H        = 54
 
-# Font sizes
-FS_STATUS = 16
-FS_TAB    = 20
-FS_TITLE  = 28
-FS_BODY   = 22
-FS_SMALL  = 16
+# Font sizes — scaled ~1.5x from the original 800x480 layout to suit 720p.
+FS_STATUS = 22
+FS_TAB    = 30
+FS_TITLE  = 42
+FS_BODY   = 32
+FS_SMALL  = 22
 
 # Custom Assets
 ASSETS_BG: str | None = None

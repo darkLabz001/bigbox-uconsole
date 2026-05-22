@@ -7,7 +7,8 @@ Two checks per registered view:
    import name, a module-level call to a missing symbol, or a syntax
    error introduced in passing.
 2. (Best-effort) The view instantiates with no args and ``render()``
-   returns without raising on a dummy 800×480 surface. Views that
+   returns without raising on a dummy surface sized to the active
+   theme.SCREEN_W/H (1280×720 for uConsole). Views that
    need runtime context (KeyboardView callback, ResultView text,
    RagnarView phase, …) get import-only coverage instead.
 
@@ -36,10 +37,11 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("BIGBOX_DEV", "1")
 
 import pygame  # noqa: E402
+from bigbox import theme  # noqa: E402
 
 pygame.display.init()
 pygame.font.init()
-pygame.display.set_mode((800, 480))
+pygame.display.set_mode((theme.SCREEN_W, theme.SCREEN_H))
 
 
 # (view_attr, module_path, class_name, ctor)
@@ -117,7 +119,7 @@ VIEW_CASES: list[tuple[str, str, str, object]] = [
 
 
 def run() -> int:
-    surf = pygame.Surface((800, 480))
+    surf = pygame.Surface((theme.SCREEN_W, theme.SCREEN_H))
     passes: list[str] = []
     failures: list[str] = []
 

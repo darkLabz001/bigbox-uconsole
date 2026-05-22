@@ -13,7 +13,7 @@ def _version(ctx: SectionContext) -> None:
     ctx.show_result(
         "bigbox",
         f"bigbox v{__version__}\n"
-        "pentesting handheld for Raspberry Pi 4 + GamePi43\n"
+        "pentesting firmware for the ClockworkPi uConsole\n"
         "see README.md for layout & key map\n",
     )
 

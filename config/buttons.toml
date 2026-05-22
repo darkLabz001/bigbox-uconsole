@@ -1,19 +1,26 @@
-[pins]
-UP     = 4
-DOWN   = 17
-LEFT   = 27
-RIGHT  = 22
-A      = 25
-B      = 24
-X      = 15
-Y      = 18
-LL     = 14
-RR     = 23
-SELECT = 9
-START  = 10
-HK     = 2
+# bigbox input config — uConsole edition.
+#
+# The uConsole keyboard appears as a regular USB HID keyboard, so bigbox
+# maps keysyms straight to logical Buttons (see bigbox/input/keyboard.py
+# for the defaults derived from the stock firmware keymap).
+#
+# Override any of those defaults below. Keys are pygame keysym names
+# (lower-cased, without the `K_` prefix). Values must be one of:
+#   UP DOWN LEFT RIGHT A B X Y START SELECT HK LL RR
+#
+# Example: bind the keyboard's `=` key (a common spot if you've remapped
+# something) to the HK overlay button.
+#
+# [keymap]
+# "equals" = "HK"
 
+[keymap]
+
+# --- Behavior tunables --------------------------------------------------------
+# These still apply: GPIO repeat behavior is handled differently for
+# keyboards (the kernel auto-repeats KEYDOWN events for you), but bigbox
+# uses these for any synthetic-repeat fallbacks.
 [behavior]
-debounce_ms = 30
+debounce_ms        = 30
 repeat_delay_ms    = 400
 repeat_interval_ms = 90

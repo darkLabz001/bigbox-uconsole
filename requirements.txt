@@ -1,7 +1,7 @@
 pygame>=2.5,<3
-gpiozero>=2.0
-lgpio>=0.2
 tomli>=2.0; python_version < "3.11"
+# GPIO is opt-in (BIGBOX_USE_GPIO=1) for users with a custom 40-pin hat
+# on the uConsole. Install with: pip install gpiozero lgpio
 requests
 PyTurboJPEG
 fastapi

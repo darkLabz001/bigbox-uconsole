@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# bigbox installer for Raspberry Pi 4 + Waveshare GamePi43.
+# bigbox installer for ClockworkPi uConsole (CM4 / CM5).
+#
+# The uConsole's CM4 image (ClockworkOS) is built on top of Raspberry Pi OS
+# Lite, so this script is the standard apt + venv + systemd dance with the
+# Pi-specific GPIO bits stripped out — the uConsole's built-in keyboard
+# replaces the GamePi43's GPIO button matrix.
 #
 # Idempotent: re-running is safe. Logs everything it changes so you can roll
 # back by inspecting /etc/bigbox.installed.
 #
-# Run as root (sudo ./scripts/install.sh) on the Pi.
+# Run as root (sudo ./scripts/install.sh) on the uConsole.
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
@@ -17,7 +22,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 INSTALL_DIR="/opt/bigbox"
 LOG="/etc/bigbox.installed"
 
-echo "==> bigbox install"
+echo "==> bigbox install (uConsole)"
 echo "    repo:    $REPO_DIR"
 echo "    target:  $INSTALL_DIR"
 
@@ -27,7 +32,6 @@ apt-get update
 apt-get install -y --no-install-recommends \
     python3 python3-venv python3-pip \
     python3-pygame \
-    python3-lgpio \
     libturbojpeg0 \
     nmap arp-scan \
     aircrack-ng iw wireless-tools \
@@ -40,6 +44,7 @@ apt-get install -y --no-install-recommends \
     mgba-sdl \
     mednafen \
     pcsxr \
+    xserver-xorg xinit x11-xserver-utils \
     python3-serial rfkill \
     curl ca-certificates \
     fonts-dejavu-core unzip
@@ -71,28 +76,12 @@ fi
 "$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
 "$INSTALL_DIR/.venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
-# --- 4. /boot/firmware/config.txt: KMS + audio out 3.5mm ---------------------
-echo "==> /boot/firmware/config.txt"
-CFG="/boot/firmware/config.txt"
-[[ -f "$CFG" ]] || CFG="/boot/config.txt"   # older Raspbian path
-backup="$CFG.bigbox.bak"
-[[ -f "$backup" ]] || cp "$CFG" "$backup"
+# NOTE: we intentionally do NOT touch /boot/firmware/config.txt — ClockworkOS
+# ships with the right MIPI panel + audio config for the uConsole, and the
+# uConsole keyboard handles its own backlight/audio routing via the STM32
+# firmware. Edits here have historically broken the display on first boot.
 
-ensure_line() {
-    local line="$1"
-    grep -qxF "$line" "$CFG" || echo "$line" >> "$CFG"
-}
-
-# Audio out to 3.5mm jack (GamePi43 routes to its built-in speaker via this).
-ensure_line "dtparam=audio=on"
-
-# NOTE: GamePi43 display driver is intentionally NOT touched here.
-# The DPI/SPI overlay differs between unit revisions; follow Waveshare's
-# wiki ( https://www.waveshare.com/wiki/GamePi43 ) and run their LCD-show
-# script for your model. If the screen already works in raspi-config, you
-# do not need to do anything more.
-
-# --- 4b. OSINT tools (sherlock + theHarvester + phoneinfoga) ----------------
+# --- 4. OSINT tools (sherlock + theHarvester + phoneinfoga) ------------------
 # Idempotent installer — see scripts/install-osint.sh for what it does.
 if [[ -x "$REPO_DIR/scripts/install-osint.sh" ]]; then
     echo "==> OSINT tools"
@@ -108,16 +97,15 @@ systemctl daemon-reload
 systemctl enable bigbox.service
 
 # /etc/bigbox is the config-override directory — buttons.toml lives here so
-# OTA git resets never touch user-tuned pin maps.
+# OTA git resets never touch user-tuned keymaps.
 install -d -m 0755 /etc/bigbox
 
 # --- 6. record what we did ----------------------------------------------------
 {
-    echo "# bigbox install log"
+    echo "# bigbox install log (uConsole)"
     echo "installed_at=$(date -Iseconds)"
     echo "repo=$REPO_DIR"
     echo "target=$INSTALL_DIR"
-    echo "config_txt=$CFG (backed up to $backup)"
 } > "$LOG"
 
 cat <<EOF
@@ -125,7 +113,6 @@ cat <<EOF
 ==> done.
 
 Next steps:
-  - confirm the GamePi43 screen works (Waveshare LCD-show driver per their wiki)
   - reboot, or:  sudo systemctl start bigbox
   - inspect logs with:  journalctl -u bigbox -f
   - to stop autostart:  sudo systemctl disable bigbox
@@ -134,9 +121,9 @@ OTA updates:
   - one-shot now:    sudo systemctl start bigbox-update.service
   - hourly auto:     sudo systemctl enable --now bigbox-update.timer
   - manual via UI:   Settings -> Check for updates (OTA)
-  - your pin map:    /etc/bigbox/buttons.toml (overrides bundled default; survives updates)
+  - your keymap:     /etc/bigbox/buttons.toml (overrides bundled default; survives updates)
 
-If the screen stays blank under bigbox but a desktop session works fine,
-you're probably on fbcon/legacy fbdev — switch to KMS in raspi-config
-(Advanced Options -> GL driver -> KMS).
+Tip: the uConsole's gamepad keys map to A=j B=k X=u Y=i, Start=Enter,
+Select=Space, L/R=Shift in keyboard mode (back switch up). If they don't
+respond, flip the rear PD2 switch — joystick mode bypasses keyboard events.
 EOF

@@ -5,13 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bigbox"
 version = "0.1.0"
-description = "Pentesting firmware for Raspberry Pi 4 + GamePi43"
+description = "Pentesting firmware for the ClockworkPi uConsole"
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
   "pygame>=2.5,<3",
-  "gpiozero>=2.0",
-  "lgpio>=0.2",
   "tomli>=2.0; python_version < '3.11'",
   "requests",
   "PyTurboJPEG",
@@ -44,6 +42,14 @@ dependencies = [
   "yt-dlp",
   "evdev",
   "segno",
+]
+
+[project.optional-dependencies]
+# Opt-in GPIO support for CM4/CM5 users with a custom hat on the uConsole's
+# 40-pin GPIO FPC. Enabled at runtime by BIGBOX_USE_GPIO=1.
+gpio = [
+  "gpiozero>=2.0",
+  "lgpio>=0.2",
 ]
 
 [project.scripts]

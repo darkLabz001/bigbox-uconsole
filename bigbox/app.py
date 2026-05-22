@@ -1,7 +1,8 @@
 """Main application loop.
 
-- Initializes pygame for the GamePi43's 800x480 panel (or windowed in dev mode).
-- Starts an input source: GPIO buttons on real hardware, keyboard in dev mode.
+- Initializes pygame for the uConsole's 1280x720 IPS panel (or windowed in dev mode).
+- Starts the input source: the uConsole's built-in USB-HID keyboard (or any
+  USB/BLE keyboard) — GPIO buttons are opt-in via BIGBOX_USE_GPIO=1.
 - Builds the launcher from `bigbox.sections`.
 - Runs at 60 FPS, draining events and dispatching them to the active screen
   (the launcher by default, a ResultView when a tool is running).
@@ -339,21 +340,32 @@ class App:
         return screen
 
     def _start_input(self) -> None:
-        if self.dev_mode:
-            self._start_web_server() # Still start web server in dev mode
-            return    # keyboard events are pulled via pygame's event queue in run()
-        
+        # uConsole's built-in keyboard is a normal USB HID device — its
+        # gamepad keys and console keys show up as KEYDOWN/KEYUP events in
+        # the main pygame loop and get translated by bigbox.input.keyboard.
+        # No background thread or hardware init required.
         cfg = load_button_config()
-        from bigbox.input.gpio import GPIOInput
-        self._gpio = GPIOInput(self.bus, cfg)
-        try:
-            self._gpio.start()
-        except Exception as e:
-            # If GPIO can't init (wrong perms, not on a Pi), fall back to keyboard
-            # so the device is still recoverable via a USB keyboard.
-            print(f"[bigbox] GPIO init failed ({e}); keyboard input only")
-            self._gpio = None
-        
+
+        # Apply any /etc/bigbox/buttons.toml [keymap] overrides on top of
+        # the bundled uConsole defaults.
+        if cfg.keymap:
+            from bigbox.input.keyboard import apply_keymap_overrides
+            apply_keymap_overrides(cfg.keymap)
+
+        # GPIO is opt-in for users with a custom hat on the uConsole's
+        # 40-pin GPIO FPC (CM4/CM5 only — non-Pi cores don't expose it
+        # the same way). Set BIGBOX_USE_GPIO=1 and populate the [pins]
+        # section of buttons.toml.
+        self._gpio = None
+        if os.environ.get("BIGBOX_USE_GPIO") == "1" and cfg.pins and not self.dev_mode:
+            try:
+                from bigbox.input.gpio import GPIOInput
+                self._gpio = GPIOInput(self.bus, cfg)
+                self._gpio.start()
+            except Exception as e:
+                print(f"[bigbox] GPIO init failed ({e}); keyboard input only")
+                self._gpio = None
+
         self._start_web_server()
 
     def _start_web_server(self) -> None:
@@ -1358,7 +1370,7 @@ class App:
             in_args = ["-f", "fbdev", "-i", "/dev/fb0"]
         else:
             display = os.environ.get("DISPLAY", ":0")
-            in_args = ["-f", "x11grab", "-s", "800x480", "-i", display]
+            in_args = ["-f", "x11grab", "-s", f"{theme.SCREEN_W}x{theme.SCREEN_H}", "-i", display]
 
         # Encoder choice: hardware first, MJPEG fallback. Both run at
         # ~10% CPU on a Pi 4 instead of the ~120% libx264 was costing,

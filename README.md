@@ -1,120 +1,150 @@
-# 🏴‍☠️ BigB0X
-### Tactical Handheld Pentesting Framework for Raspberry Pi
+# BigB0X :: uConsole Edition
+### Tactical Pentesting Firmware for the ClockworkPi uConsole
 **Ghost Protocol // High-Fidelity Signal Intelligence // Portable Auditing**
 
-BigB0X is a self-contained, gamepad-driven tactical firmware designed for the **Raspberry Pi 4** and **Zero 2W**. It transforms your handheld into a powerful signal intelligence and network auditing tool with a high-contrast "Ghost Protocol" interface.
+BigB0X is a self-contained, keyboard-driven tactical firmware for the
+**ClockworkPi uConsole** (CM4 / CM5 core). It turns the device into a
+handheld signal intelligence and network auditing rig with a high-contrast
+"Ghost Protocol" interface, rendered natively on the uConsole's 5"
+1280×720 IPS panel.
 
----   
-
-## 🛠️ Core Tactical Suite
-
-### 📡 Reconnaissance & Signals
-*   **Signal Scraper:** High-fidelity proximity profiler for Wi-Fi and Bluetooth LE. Features real-time RSSI tracking and vendor identification (Apple, Tesla, Samsung, etc.).
-*   **FlockSeeker Ultra:** Specialized detection suite for ALPR (Automated License Plate Reader) infrastructure and traffic surveillance nodes.
-*   **Camera Interceptor:** Tactical "Dive" mode that hijacks local camera management APs to view internal RTSP/MJPEG streams.
-*   **Traffic Cam Browser:** Global uplink to live public traffic and weather feeds from major cities.
-*   **Wardriving:** GPS-tagged Wi-Fi and BT sweeps with WiGLE-compatible CSV export.
-
-### 📶 Wireless Auditing
-*   **Wifite 2 Interactive:** Fully manual/interactive auditor for WPS, WPA handshakes, and PMKID attacks with a scrollable tactical terminal.
-*   **Wi-Fi Multi-Tool:** Integrated scanner for deauth attacks and handshake captures.
-*   **Evil Twin:** Rogue AP suite with captive portal for credential harvesting.
-
-### 💬 Social & Communication
-*   **Tactical Messenger:** Threaded SMS client supporting **Textbelt** (free daily texts) and **Carrier Gateways** (unlimited texts via Email).
-*   **Tactical Mail:** Full-featured IMAP/SMTP email client optimized for handheld screens.
-*   **Global Chat:** In-device encrypted chat client via `darksec.uk`.
-*   **Local BBS:** LAN-based message board and dead-drop.
-
-### 📺 Media & Entertainment
-*   **Internet TV:** Dual-mode HLS/mpv player with a curated list of international news and lifestyle channels.
-*   **Media Player:** Local movie and video browser with hardware-optimized playback.
+This is a fork of the original [BigB0X for Raspberry Pi 4 + GamePi43](https://github.com/darkLabz001/bigbox).
+The GPIO button matrix has been replaced with the uConsole's built-in
+USB-HID keyboard, the UI re-tuned for 720p, and Pi-only install steps
+removed.
 
 ---
 
-## ⚡ BigB0X :: Setup Edition (EASY INSTALL)
-The fastest way to deploy BigB0X. This version includes a guided on-screen wizard and a high-fidelity web configurator.
+## Core Tactical Suite
 
-### 🌐 [BigB0X Tactical Web Deployer](https://darkLabz001.github.io/bigbox/)
-1.  **Flash:** Use Raspberry Pi Imager to flash **Pi OS Lite (64-bit)** to your SD card.
-2.  **Configure:** Visit the **[Web Deployer](https://darkLabz001.github.io/bigbox/)** to enter your Wi-Fi credentials and generate a `setup.json` file.
-3.  **Deploy:** Drop the `setup.json` onto the **boot** partition of your SD card.
-4.  **Boot:** Insert the card and power on. BigB0X will automatically link to Wi-Fi and launch the **Guided Initialization Wizard**.
+### Reconnaissance & Signals
+*   **Signal Scraper** — High-fidelity proximity profiler for Wi-Fi and Bluetooth LE. Real-time RSSI tracking and vendor identification.
+*   **FlockSeeker Ultra** — Specialized detection suite for ALPR (Automated License Plate Reader) infrastructure and traffic surveillance nodes.
+*   **Camera Interceptor** — Tactical "Dive" mode that hijacks local camera management APs to view internal RTSP/MJPEG streams.
+*   **Traffic Cam Browser** — Global uplink to live public traffic and weather feeds.
+*   **Wardriving** — GPS-tagged Wi-Fi and BT sweeps with WiGLE-compatible CSV export.
+
+### Wireless Auditing
+*   **Wifite 2 Interactive** — Fully manual/interactive auditor for WPS, WPA handshakes, and PMKID attacks with a scrollable tactical terminal.
+*   **Wi-Fi Multi-Tool** — Integrated scanner for deauth attacks and handshake captures.
+*   **Evil Twin** — Rogue AP suite with captive portal for credential harvesting.
+
+### Social & Communication
+*   **Tactical Messenger** — Threaded SMS client (Textbelt + Carrier Gateways).
+*   **Tactical Mail** — Full-featured IMAP/SMTP email client optimized for handheld screens.
+*   **Global Chat** — In-device encrypted chat client via `darksec.uk`.
+*   **Local BBS** — LAN-based message board and dead-drop.
+
+### Media & Entertainment
+*   **Internet TV** — Dual-mode HLS/mpv player with a curated list of international news and lifestyle channels.
+*   **Media Player** — Local movie/video browser with hardware-optimized playback.
 
 ---
 
-## 📸 Screenshots
+## Interface & Controls
 
-<img width="605" height="354" alt="abot" src="https://github.com/user-attachments/assets/d94c161a-0141-4c97-8f2d-330e985a178c" />  <img width="600" height="357" alt="2" src="https://github.com/user-attachments/assets/dc62d6d7-599b-4e17-8d82-be5b071be5fc" />   <img width="610" height="371" alt="3" src="https://github.com/user-attachments/assets/99b6b361-9902-4360-92de-c90c79a52400" />    <img width="601" height="369" alt="4" src="https://github.com/user-attachments/assets/2f2180fa-61cf-4265-8221-6117480b0c27" />   <img width="602" height="359" alt="7" src="https://github.com/user-attachments/assets/1c71d676-e153-4609-a8b6-df8b384e33af" />   <img width="610" height="366" alt="6" src="https://github.com/user-attachments/assets/0fe44bb9-a894-48ec-bf9e-4b5abafaaced" />   
-<img width="1866" height="792" alt="8" src="https://github.com/user-attachments/assets/f4e693c1-a860-43a3-9b97-79a7abae0bad" />   <img width="1086" height="1448" alt="box" src="https://github.com/user-attachments/assets/55613f75-78dd-4a1d-96a4-428a60744252" />   <img width="1086" height="1132" alt="BigB0X" src="https://github.com/user-attachments/assets/c1ad7e53-2ee9-4302-90fe-94843196db22" />
+BigB0X is designed for fast, one-handed use on the uConsole's built-in
+keyboard. The stock ClockworkPi keyboard firmware (rear PD2 switch in
+**keyboard mode**, the default) emits these keysyms for the gamepad-style
+keys, which bigbox maps to its logical buttons:
 
-
----
-
-## 🎮 Interface & Controls
-
-BigB0X is designed for fast, one-handed operation using the GamePi43 controller or any external USB/BLE keyboard.
-
-| Command | GamePi43 Button | Keyboard |
+| Logical Button | uConsole key | PC dev fallback |
 | :--- | :--- | :--- |
-| **Navigate** | D-Pad | Arrows / WASD |
-| **Initiate / Select** | Button A | Enter / Space / Z |
-| **Back / Cancel** | Button B | Escape / X |
-| **Secondary Action** | Button X | C |
-| **Context Menu** | Button Y | V |
-| **Left Shoulder** | LL Button | Q / L |
-| **Right Shoulder** | RR Button | E / R |
-| **System Menu** | Start | Return |
-| **Tool Config** | Select | Backspace / Tab |
+| **Navigate** | D-Pad arrows | Arrows / WASD |
+| **A** (Select/Initiate) | A button (sends `j`) | Z |
+| **B** (Back/Cancel) | B button (sends `k`) | X / Esc |
+| **X** (Secondary) | X button (sends `u`) | C |
+| **Y** (Context) | Y button (sends `i`) | V |
+| **LL** (Left shoulder) | L button (Left Shift) | Q / L |
+| **RR** (Right shoulder) | R button (Right Shift) | E / R |
+| **Start** (System menu) | Start (Enter) | Enter |
+| **Select** (Tool config) | Select (Space) | Backspace / Tab |
+| **HK** (Hotkey overlay) | H / Home | H / Home |
+
+If the gamepad keys don't seem to respond, check the rear **PD2 switch**:
+when it's in joystick mode the buttons emit USB Joystick events instead
+of keystrokes, and bigbox won't see them. Flip it back to keyboard mode.
+
+**Custom keymap:** drop a `[keymap]` table into `/etc/bigbox/buttons.toml`
+to override any mapping without editing code. See `config/buttons.toml`
+for the example format.
 
 ---
 
-## 📦 Hardware Requirements
+## Hardware Requirements
 
-*   **Processor:** Raspberry Pi 4 (2GB+) or Pi Zero 2W.
-*   **Display:** [Waveshare GamePi43](https://www.waveshare.com/wiki/GamePi43) (4.3" 800×480 IPS).
-*   **Wi-Fi:** Onboard + Optional **Alfa AWUS036ACS** (RTL8821AU) for monitor mode.
-*   **Bluetooth:** Onboard + Optional **TP-Link USB Adapter** (hci0 priority).
-*   **GPS:** USB NMEA dongle (Quectel LC86L recommended) for Wardriving.
+*   **Device:** ClockworkPi uConsole with **CM4** or **CM5** core module.
+*   **Display:** built-in 5" 1280×720 IPS panel (no extra hardware).
+*   **Wi-Fi:** uConsole's onboard 802.11ac. Optional Alfa USB adapter (e.g. **AWUS036ACS**) recommended for monitor-mode attacks — the onboard radio cannot enter monitor mode reliably.
+*   **Bluetooth:** uConsole's onboard BT 5.0. Optional **TP-Link UB500** USB adapter for stronger receive.
+*   **GPS:** USB NMEA dongle (Quectel LC86L or similar) for Wardriving.
+
+Other core modules (A-06 / R-01) are not officially supported in this
+branch — the install script assumes ClockworkOS for CM4 (which is built
+on Raspberry Pi OS Lite). The codebase will largely work on A-06, but
+audio routing and hardware encoding will need separate verification.
 
 ---
 
-## 🚀 Installation
+## Installation
 
-### 1. Fast Deployment (SD Card Prep)
-Flash **Raspberry Pi OS Lite (64-bit)** with Raspberry Pi Imager. Then, run our prep script on your Linux machine:
-```bash
-sudo BIGBOX_HOSTNAME=bigbox ./scripts/sdcard-prepare.sh /dev/sdX
-```
+### On a flashed uConsole
+1. Flash the official ClockworkPi uConsole CM4 image (ClockworkOS) to your microSD card using `dd` or Raspberry Pi Imager.
+2. Boot the uConsole, connect to Wi-Fi, then over SSH (or directly in a terminal):
 
-### 2. Manual Installation
-If you already have Pi OS running:
 ```bash
-git clone https://github.com/darkLabz001/bigbox.git
-cd bigbox
+git clone https://github.com/darkLabz001/bigbox-uconsole.git
+cd bigbox-uconsole
 sudo ./scripts/install.sh
 sudo systemctl enable --now bigbox
 ```
 
----
+The installer is idempotent — re-running it is safe.
 
-## 🔄 System Updates (OTA)
-BigB0X features a high-fidelity **OTA Update System**. Go to **Settings > Check for Updates** to pull the latest tactical payloads, dependencies, and bug fixes. The update process includes real-time Discord notifications for repository changes.
+### Optional: GPIO hat support
+The uConsole's 40-pin GPIO FPC connector is unused by default. If you've
+wired a hat with physical buttons and want them in addition to the
+built-in keyboard, install the extras and set `BIGBOX_USE_GPIO=1`:
 
----
+```bash
+/opt/bigbox/.venv/bin/pip install gpiozero lgpio
+sudo systemctl edit bigbox          # add  Environment=BIGBOX_USE_GPIO=1
+sudo systemctl restart bigbox
+```
 
-## 🎨 Custom Theming
-BigB0X includes a robust theme engine. Edit JSON files in `config/themes/` to change colors, background grids, and icon sets. Check the [Theming Guide](config/themes/README.md) for more info.
-
----
-
-## 🚀 More to Come...
-*   **Mesh Intercom:** PTT voice notes over local P2P mesh.
-*   **Ghost Intel:** Anonymous target monitoring (Twitter/Reddit front-ends).
-*   **Digital Graffiti:** GPS-locked hidden notes for field coordination.
-*   **SDR Integration:** Basic signal sniffing for 433MHz/Sub-GHz.
+Then add a `[pins]` section to `/etc/bigbox/buttons.toml` with your BCM
+pin numbers (one per logical button).
 
 ---
 
-## ⚖️ Legal
-*For educational and authorized security testing purposes only. Usage on networks without explicit permission is strictly prohibited.*
+## System Updates (OTA)
+
+BigB0X ships with an OTA update path. **Settings → Check for Updates**
+pulls the latest tactical payloads, dependencies, and bug fixes; the
+update process can fire a Discord webhook on success.
+
+---
+
+## Custom Theming
+
+BigB0X includes a theme engine. Edit JSON files in `config/themes/` to
+change colors, background grids, and icon sets. See the
+[Theming Guide](config/themes/README.md). The uConsole panel is 1280×720
+— background art should be sized accordingly.
+
+---
+
+## Roadmap
+
+*   **Trackball support** — wire the uConsole's mini-trackball into the launcher as a pointer / scroll source.
+*   **4G modem integration** — expose status + connect/disconnect from the COMMS card when the optional cellular expansion is installed.
+*   **RTL-SDR / LoRa** — integrate the community RTL-SDR+SX1262 expansion board into the Recon section.
+*   **Mesh Intercom** — PTT voice notes over local P2P mesh.
+*   **Ghost Intel** — Anonymous target monitoring.
+
+---
+
+## Legal
+
+*For educational and authorized security testing purposes only. Use on
+networks without explicit permission is strictly prohibited.*

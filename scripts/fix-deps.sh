@@ -16,7 +16,7 @@ echo "PROGRESS: 10"
 
 # List of all tools used by bigbox (sync with install.sh)
 PKGS=(
-    python3 python3-venv python3-pip python3-pygame python3-lgpio
+    python3 python3-venv python3-pip python3-pygame
     libturbojpeg0 nmap arp-scan aircrack-ng iw wireless-tools
     tcpdump mdk4 wifite reaver bully pixiewps tshark hashcat macchanger
     cryptsetup bettercap bluez alsa-utils pulseaudio-utils mpv mgba-sdl mednafen pcsxr
