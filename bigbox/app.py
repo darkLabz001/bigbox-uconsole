@@ -825,7 +825,16 @@ class App:
                         self.raw_capture_callback = None
                         cb(None if ev.key == pygame.K_ESCAPE else ev.key)
                         continue
-                    if ev.key == pygame.K_ESCAPE:
+                    # uConsole QWERTY: type straight into the on-screen keyboard;
+                    # the arrows/gamepad still drive its grid.
+                    if (self.kb_view is not None
+                            and hasattr(self.kb_view, "type_key")
+                            and self.kb_view.type_key(ev)):
+                        continue
+                    # Esc quits ONLY in dev mode (windowed on a PC). On the
+                    # uConsole it must not close bigbox — fall through to the
+                    # keymap, where Esc is Back (Button.B).
+                    if self.dev_mode and ev.key == pygame.K_ESCAPE:
                         self.running = False
                     kbd_translate(ev, self.bus)
                 elif ev.type == pygame.KEYUP:

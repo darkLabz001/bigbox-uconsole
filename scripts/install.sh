@@ -29,30 +29,36 @@ echo "    target:  $INSTALL_DIR"
 # --- 1. apt packages ----------------------------------------------------------
 echo "==> apt packages"
 apt-get update
+
+# Required for bigbox + its X session to run. If these fail we want to know.
 apt-get install -y --no-install-recommends \
     python3 python3-venv python3-pip \
-    python3-pygame \
-    libturbojpeg0 \
+    python3-pygame python3-serial rfkill \
+    alsa-utils libturbojpeg0 \
+    xserver-xorg xinit x11-xserver-utils \
+    curl ca-certificates fonts-dejavu-core unzip
+
+# Optional tools/emulators, installed best-effort. Several are missing on Kali
+# arm64 (mgba-sdl / pcsxr / mednafen, and kismet on some releases); a single
+# batch apt-get fails atomically on the first missing one and aborts the whole
+# install. Per-package + best-effort means available packages install and
+# unavailable ones are simply skipped.
+for pkg in \
     nmap arp-scan \
     aircrack-ng iw wireless-tools \
     tcpdump mdk4 wifite reaver bully pixiewps tshark \
     hashcat macchanger \
     cryptsetup bettercap \
     bluez \
-    alsa-utils \
-    mpv \
-    mgba-sdl \
-    mednafen \
-    pcsxr \
-    xserver-xorg xinit x11-xserver-utils \
-    python3-serial rfkill \
-    curl ca-certificates \
-    fonts-dejavu-core unzip
+    mpv mgba-sdl mednafen pcsxr; do
+    apt-get install -y --no-install-recommends "$pkg" \
+        || echo "  (skipping unavailable package: $pkg)"
+done
 
 # --- 1b. tailscale ------------------------------------------------------------
 if ! command -v tailscale >/dev/null 2>&1; then
     echo "==> tailscale"
-    curl -fsSL https://tailscale.com/install.sh | sh
+    curl -fsSL https://tailscale.com/install.sh | sh || echo "  (tailscale install skipped)"
 fi
 
 # --- 2. deploy source to /opt/bigbox -----------------------------------------
