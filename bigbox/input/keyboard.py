@@ -66,9 +66,10 @@ KEYMAP: dict[int, Button] = {
     pygame.K_ESCAPE: Button.B,
 
     # --- Hotkey button ------------------------------------------------------
-    # uConsole has no dedicated HK key. Pick something convenient.
-    # Tweak via /etc/bigbox/buttons.toml [keymap] without code edits.
-    pygame.K_h: Button.HK,
+    # uConsole has no dedicated HK key. Do NOT bind a letter (e.g. 'h') to it —
+    # on a full keyboard that fires the hotkey menu mid-typing. HK is reachable
+    # via the SELECT+START chord (Space+Enter) and Home. Override in
+    # /etc/bigbox/buttons.toml [keymap] if you want a different key.
     pygame.K_HOME: Button.HK,
 }
 

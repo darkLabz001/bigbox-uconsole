@@ -205,6 +205,11 @@ class App:
         # callback INSTEAD of routing through kbd_translate, then clears
         # the slot. ESC during capture passes None to mean "cancelled".
         self.raw_capture_callback: Callable[[int | None], None] | None = None
+        # Trackball (uConsole roller): accumulate relative mouse motion and
+        # emit D-pad steps once it crosses a threshold, so rolling the ball
+        # scrolls menus; clicks act as select/back.
+        self._tb_ax = 0.0
+        self._tb_ay = 0.0
 
         # Messaging background sync
         from bigbox.ui.messenger import MessengerSync
@@ -285,6 +290,11 @@ class App:
         from bigbox.ui.monster import Monster
         self.monster = Monster()
 
+    def _tap_button(self, b: Button) -> None:
+        """Emit a press+release for a synthesized button (trackball nav/click)."""
+        self.bus.put(ButtonEvent(b, pressed=True))
+        self.bus.put(ButtonEvent(b, pressed=False))
+
     # ---------- lifecycle ----------
     def _init_display(self) -> pygame.Surface:
         # Pick a video driver. Prefer KMS DRM if /dev/dri exists; fall back to
@@ -345,6 +355,13 @@ class App:
             pygame.mouse.set_visible(False)
         except pygame.error:
             pass    # some drivers don't support cursor control; harmless.
+        # Grab the pointer so the trackball keeps delivering relative motion
+        # instead of stopping at the screen edge (dev mode leaves it free).
+        if not self.dev_mode:
+            try:
+                pygame.event.set_grab(True)
+            except Exception:
+                pass
         return screen
 
     def _start_input(self) -> None:
@@ -842,6 +859,26 @@ class App:
                     # don't emit a stray Button release for the captured key.
                     if self.raw_capture_callback is None:
                         kbd_translate(ev, self.bus)
+                elif ev.type == pygame.MOUSEMOTION:
+                    # Trackball -> D-pad: roll to scroll menus. Emit one
+                    # direction press per STEP pixels of accumulated motion.
+                    self._tb_ax += ev.rel[0]
+                    self._tb_ay += ev.rel[1]
+                    STEP = 22
+                    while self._tb_ay <= -STEP:
+                        self._tb_ay += STEP; self._tap_button(Button.UP)
+                    while self._tb_ay >= STEP:
+                        self._tb_ay -= STEP; self._tap_button(Button.DOWN)
+                    while self._tb_ax <= -STEP:
+                        self._tb_ax += STEP; self._tap_button(Button.LEFT)
+                    while self._tb_ax >= STEP:
+                        self._tb_ax -= STEP; self._tap_button(Button.RIGHT)
+                elif ev.type == pygame.MOUSEBUTTONDOWN:
+                    # Trackball click: left = select (A), right = back (B).
+                    if ev.button == 1:
+                        self._tap_button(Button.A)
+                    elif ev.button == 3:
+                        self._tap_button(Button.B)
 
             # 2. Drain logical button events; route to the foreground screen.
             for bev in self.bus.drain():
