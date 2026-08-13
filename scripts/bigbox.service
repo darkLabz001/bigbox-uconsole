@@ -1,6 +1,9 @@
 [Unit]
-Description=bigbox pentesting firmware
-After=multi-user.target network.target
+Description=bigbox pentesting firmware (uConsole)
+# Ordered after the Plymouth boot-splash services so the splash plays
+# first, exits, and releases the DRM master / VT before bigbox's xinit
+# grabs vt1. Harmless no-op on images without Plymouth.
+After=multi-user.target network.target plymouth-quit.service plymouth-quit-wait.service
 ConditionPathExists=/opt/bigbox/bigbox/__main__.py
 # If we crash 5 times within 5 minutes, stop trying — prevents a tight
 # flickering boot loop when the display/GPU isn't ready and lets a human
