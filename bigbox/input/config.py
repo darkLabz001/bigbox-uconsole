@@ -79,6 +79,21 @@ def _resolve_keysym(name: str) -> int | None:
 # Keys reserved in the [joystick] section that are settings, not button maps.
 _JOY_RESERVED = {"enabled", "devnode", "dpad", "deadzone", "mode"}
 
+# evdev BTN_* codes pinned so [joystick] override names resolve even on hosts
+# without python3-evdev. Values are kernel-UAPI (input-event-codes.h); keep in
+# sync with bigbox/input/joystick.py.
+_JOY_BTN_NAME_TO_CODE = {
+    "BTN_TRIGGER": 0x120, "BTN_THUMB": 0x121, "BTN_THUMB2": 0x122,
+    "BTN_TOP": 0x123, "BTN_TOP2": 0x124, "BTN_PINKIE": 0x125,
+    "BTN_BASE": 0x126, "BTN_BASE2": 0x127, "BTN_BASE3": 0x128,
+    "BTN_BASE4": 0x129, "BTN_BASE5": 0x12A, "BTN_BASE6": 0x12B,
+    "BTN_SOUTH": 0x130, "BTN_EAST": 0x131, "BTN_NORTH": 0x133,
+    "BTN_WEST": 0x134, "BTN_TL": 0x136, "BTN_TR": 0x137,
+    "BTN_SELECT": 0x13A, "BTN_START": 0x13B,
+    "BTN_DPAD_UP": 0x220, "BTN_DPAD_DOWN": 0x221,
+    "BTN_DPAD_LEFT": 0x222, "BTN_DPAD_RIGHT": 0x223,
+}
+
 
 def _resolve_evdev_code(name: str) -> int | None:
     """Turn a joystick button name ("BTN_SOUTH") or raw int ("304") into the
@@ -87,11 +102,12 @@ def _resolve_evdev_code(name: str) -> int | None:
         return int(name)
     except ValueError:
         pass
+    upper = str(name).upper()
     try:
         from evdev import ecodes
-        return int(getattr(ecodes, str(name).upper()))
+        return int(getattr(ecodes, upper))
     except Exception:
-        return None
+        return _JOY_BTN_NAME_TO_CODE.get(upper)
 
 
 def _fmt_toml_value(v: object) -> str:

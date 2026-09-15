@@ -44,11 +44,15 @@ removed.
 ## Interface & Controls
 
 BigB0X is designed for fast, one-handed use on the uConsole's built-in
-keyboard. The stock ClockworkPi keyboard firmware (rear PD2 switch in
-**keyboard mode**, the default) emits these keysyms for the gamepad-style
-keys, which bigbox maps to its logical buttons:
+keyboard. The controller is a single STM32 composite USB-HID device that
+always exposes a QWERTY keyboard, a trackball mouse and a gamepad at once.
+With the stock firmware the D-pad / A·B·X·Y / Select·Start area reports
+*either* keyboard keysyms (rear PD2 switch high) *or* a USB joystick
+(PD2 low). **Both are supported** — bigbox reads the keysyms when PD2 is
+high and the joystick over evdev when PD2 is low, so the controls work in
+either position:
 
-| Logical Button | uConsole key | PC dev fallback |
+| Logical Button | uConsole key (PD2 high) | PC dev fallback |
 | :--- | :--- | :--- |
 | **Navigate** | D-Pad arrows | Arrows / WASD |
 | **A** (Select/Initiate) | A button (sends `j`) | Z |
@@ -59,11 +63,16 @@ keys, which bigbox maps to its logical buttons:
 | **RR** (Right shoulder) | R button (Right Shift) | E / R |
 | **Start** (System menu) | Start (Enter) | Enter |
 | **Select** (Tool config) | Select (Space) | Backspace / Tab |
-| **HK** (Hotkey overlay) | H / Home | H / Home |
+| **HK** (Hotkey overlay) | Select+Start chord, Home | Home |
 
-If the gamepad keys don't seem to respond, check the rear **PD2 switch**:
-when it's in joystick mode the buttons emit USB Joystick events instead
-of keystrokes, and bigbox won't see them. Flip it back to keyboard mode.
+With PD2 low the same physical keys arrive as a joystick: D-pad = ABS_X/
+ABS_Y (0..1023, neutral 511), X/A/B/Y = joystick buttons 1..4, Select/Start
+= buttons 9/10. Bigbox maps those in `bigbox.input.joystick` (defaults in
+`config/buttons.toml [joystick]`) and they behave identically. L/R are
+always keyboard shifts regardless of switch position.
+
+To see exactly which codes your device emits, run bigbox with
+`BIGBOX_JOY_DEBUG=1` — every raw evdev event is printed to the journal.
 
 **Custom keymap:** drop a `[keymap]` table into `/etc/bigbox/buttons.toml`
 to override any mapping without editing code. See `config/buttons.toml`

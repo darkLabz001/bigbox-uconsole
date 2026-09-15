@@ -167,6 +167,10 @@ OTA updates:
   - your keymap:     /etc/bigbox/buttons.toml (overrides bundled default; survives updates)
 
 Tip: the uConsole's gamepad keys map to A=j B=k X=u Y=i, Start=Enter,
-Select=Space, L/R=Shift in keyboard mode (back switch up). If they don't
-respond, flip the rear PD2 switch — joystick mode bypasses keyboard events.
+Select=Space, L/R=Shift (rear switch up). With the switch down the same
+keys arrive as a USB joystick (D-pad = X/Y axes, X/A/B/Y = buttons 1..4)
+— bigbox reads those natively too, so both switch positions work. If a
+specific button still doesn't respond, run bigbox with BIGBOX_JOY_DEBUG=1
+(set it for the service via `sudo systemctl edit bigbox`) to see the raw
+evdev/keysym events it actually receives.
 EOF

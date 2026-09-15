@@ -1,12 +1,20 @@
 # bigbox input config — uConsole edition.
 #
-# The uConsole keyboard appears as a regular USB HID keyboard, so bigbox
-# maps keysyms straight to logical Buttons (see bigbox/input/keyboard.py
-# for the defaults derived from the stock firmware keymap).
+# The uConsole controller is a single STM32 composite USB-HID device that
+# always exposes three interfaces at once: a QWERTY keyboard (the M11..M88
+# matrix), a mouse (trackball), and a gamepad (D-pad / A·B·X·Y / Select·
+# Start). This file maps input to logical Buttons:
 #
-# Override any of those defaults below. Keys are pygame keysym names
-# (lower-cased, without the `K_` prefix). Values must be one of:
 #   UP DOWN LEFT RIGHT A B X Y START SELECT HK LL RR
+#
+# * [keymap] maps pygame keysyms (the QWERTY + keysym-mode gamepad: arrows,
+#   j/k/u/i, Space/Enter, L/R = Left/Right Shift — bigbox/input/keyboard.py)
+# * [joystick] maps the gamepad interface's evdev codes
+#   (bigbox/input/joystick.py)
+#
+# Override any default by editing below. Keys are pygame keysym names
+# (lower-cased, without the `K_` prefix). For a hand-tuned copy that
+# survives OTA, put your file at /etc/bigbox/buttons.toml.
 #
 # Example: bind the keyboard's `=` key (a common spot if you've remapped
 # something) to the HK overlay button.
@@ -17,25 +25,35 @@
 [keymap]
 
 # --- Native gamepad (USB-HID joystick) input --------------------------------
-# The uConsole controller presents the gamepad area either as keyboard keysyms
-# (rear PD2 switch in keyboard mode — see bigbox.input.keyboard) or as a USB
-# joystick. Either way bigbox drives the same D-pad / face / shoulder /
-# Select+Start buttons. Defaults below match a standard XInput-style layout;
-# override any button by writing its evdev code name (or integer) here:
+# The uConsole's controller is a single STM32 composite device that always
+# exposes a QWERTY keyboard, a mouse (trackball) and a gamepad together.
+# With the rear PD2 switch LOW the gamepad area reports a USB joystick:
+#
+#   D-pad   = ABS_X/ABS_Y axes   0..1023, neutral 511
+#   X / A / B / Y = joystick buttons 1..4  -> BTN_TRIGGER / BTN_THUMB /
+#                                            BTN_THUMB2 / BTN_TOP
+#   Select / Start = joystick buttons 9/10  -> BTN_BASE3 / BTN_BASE4
+#
+# L/R are keyboard Left/Right Shift in BOTH switch positions (they live on
+# the keyboard interface, not the joystick), so they bind in [keymap] below,
+# never in [joystick]. With PD2 HIGH the gamepad area sends keysyms instead
+# (arrows, j/k/u/i, Space, Enter) and the joystick section is simply unused.
+#
+# Defaults already map the stock codes above; only override if you've
+# reflashed the keyboard with custom/QMK firmware and the button order
+# differs. Keys are evdev code names (or raw ints), values are Button names.
 #
 #   [joystick]
 #   enabled  = true
 #   devnode  = ""            # "/dev/input/eventN" to pin a device
 #   dpad     = "auto"        # auto|hat0|hat1|buttons|stick|both
-#   deadzone = 0.15          # for a stick-sourced D-pad
-#   "BTN_SOUTH"     = "A"    # XInput: A = south/east/north/west face
-#   "BTN_EAST"      = "B"
-#   "BTN_NORTH"     = "X"
-#   "BTN_WEST"      = "Y"
-#   "BTN_TL"        = "LL"
-#   "BTN_TR"        = "RR"
-#   "BTN_SELECT"    = "SELECT"
-#   "BTN_START"     = "START"
+#   deadzone = 0.15          # for a stick-sourced D-pad (0..0.9)
+#   "BTN_TRIGGER" = "X"      # stock uConsole codes:
+#   "BTN_THUMB"   = "A"
+#   "BTN_THUMB2"  = "B"
+#   "BTN_TOP"     = "Y"
+#   "BTN_BASE3"   = "SELECT"
+#   "BTN_BASE4"   = "START"
 [joystick]
 
 # --- Behavior tunables --------------------------------------------------------

@@ -29,7 +29,7 @@ from bigbox import _font_cache  # noqa: F401  (side-effect import)
 from bigbox import theme
 from bigbox.events import Button, ButtonEvent, EventBus
 from bigbox.input import load_button_config
-from bigbox.input.keyboard import translate as kbd_translate
+from bigbox.input.keyboard import reset_key_state as kbd_release_states, translate as kbd_translate
 from bigbox.runner import run_streaming
 from bigbox.sections import build_sections
 from bigbox.update_checker import UpdateChecker
@@ -365,10 +365,12 @@ class App:
         return screen
 
     def _start_input(self) -> None:
-        # uConsole's built-in keyboard is a normal USB HID device — its
-        # gamepad keys and console keys show up as KEYDOWN/KEYUP events in
-        # the main pygame loop and get translated by bigbox.input.keyboard.
-        # No background thread or hardware init required.
+        # uConsole's built-in controller is a composite USB-HID device:
+        # the QWERTY matrix is a normal keyboard, the trackball a mouse, and
+        # the gamepad area either keysyms or a joystick. Keyboard keysyms
+        # show up as KEYDOWN/KEYUP events in the main pygame loop and get
+        # translated by bigbox.input.keyboard. The gamepad interface (always
+        # present; used when PD2 is LOW) is read by bigbox.input.joystick.
         cfg = load_button_config()
 
         # A non-empty [keymap] in /etc/bigbox/buttons.toml REPLACES the
@@ -393,12 +395,15 @@ class App:
                 print(f"[bigbox] GPIO init failed ({e}); keyboard input only")
                 self._gpio = None
 
-        # Native HID-joystick (gamepad) input: with the uConsole's rear PD2
-        # switch in joystick mode the gamepad area registers as a USB joystick
-        # (D-pad hat/buttons + BTN_* face/select/start) rather than keysyms.
-        # evdev thread pushes ButtonEvents onto the same bus as the keyboard,
-        # so D-pad/face buttons behave identically in both switch modes.
-        # Disable with `enabled = false` in [joystick].
+        # Native HID-joystick (gamepad) input. The uConsole's controller is a
+        # single STM32 composite device (keyboard + mouse + gamepad on one
+        # USB); its gamepad area reports a USB joystick — D-pad as ABS_X/ABS_Y
+        # (0..1023 neutral 511), X/A/B/Y as joystick buttons 1..4
+        # (BTN_TRIGGER/THUMB/THUMB2/TOP), Select/Start as buttons 9/10
+        # (BTN_BASE3/BASE4) — whenever PD2 is LOW. L/R stay keyboard shifts.
+        # The evdev thread pushes ButtonEvents onto the same bus as the
+        # keyboard, so D-pad/face buttons behave identically in both switch
+        # positions. Disable with `enabled = false` in [joystick].
         self._joy = None
         if cfg.joy_enabled:
             try:
@@ -849,6 +854,11 @@ class App:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     self.running = False
+                elif ev.type == pygame.WINDOWFOCUSLOST:
+                    # Mid-keypress window switch would leave the keyboard
+                    # chord/buttons stuck; force everything released.
+                    for release in kbd_release_states():
+                        self.bus.put(release)
                 elif ev.type == pygame.KEYDOWN:
                     # Raw-key capture for the Button Mapper: one-shot
                     # callback consumes the next KEYDOWN instead of
@@ -890,11 +900,14 @@ class App:
                     while self._tb_ax >= STEP:
                         self._tb_ax -= STEP; self._tap_button(Button.RIGHT)
                 elif ev.type == pygame.MOUSEBUTTONDOWN:
-                    # Trackball click: left = select (A), right = back (B).
+                    # Trackball buttons: left = select (A), right = back (B),
+                    # middle (pressing the ball) = HK hotkey overlay.
                     if ev.button == 1:
                         self._tap_button(Button.A)
                     elif ev.button == 3:
                         self._tap_button(Button.B)
+                    elif ev.button == 2:
+                        self._tap_button(Button.HK)
 
             # 2. Drain logical button events; route to the foreground screen.
             for bev in self.bus.drain():
