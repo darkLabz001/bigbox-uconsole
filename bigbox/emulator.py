@@ -287,20 +287,29 @@ _DEFAULT_EMULATOR_CARD = 1   # Headphones (3.5 mm jack)
 def _emulator_audio_card() -> int:
     """Which ALSA card emulators should output to. Override via
     /etc/bigbox/emulator_audio.json — `{"alsa_card": 0}` for HDMI,
-    `{"alsa_card": 1}` for Headphones. Default 1."""
+    `{"alsa_card": 1}` for Headphones. Defaults to the detected analog
+    output card."""
+    import json
+    from bigbox import audio
     try:
-        import json
         with EMULATOR_AUDIO_CFG.open() as f:
             data = json.load(f)
         n = int(data.get("alsa_card", _DEFAULT_EMULATOR_CARD))
-        return n if n in (0, 1) else _DEFAULT_EMULATOR_CARD
     except Exception:
+        n = _DEFAULT_EMULATOR_CARD
+    detected = [num for num, _name in audio.list_alsa_cards()]
+    if detected and n in detected:
+        return n
+    if not detected:
         return _DEFAULT_EMULATOR_CARD
+    return audio.output_card()
 
 
 def set_emulator_audio_card(card: int) -> bool:
     """Persist the user's choice of ALSA card for emulator audio."""
-    if card not in (0, 1):
+    from bigbox import audio
+    detected = [num for num, _name in audio.list_alsa_cards()]
+    if detected and card not in detected:
         return False
     try:
         import json
