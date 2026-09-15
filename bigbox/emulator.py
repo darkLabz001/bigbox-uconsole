@@ -454,9 +454,10 @@ def save_audio_volume() -> dict:
         except Exception:
             pass
         return {"kind": "pulse"}
+    from bigbox import audio as _a
     try:
         out = subprocess.check_output(
-            ["amixer", "-c", "1", "sget", "PCM"],
+            ["amixer", "-c", str(_a.output_card()), "sget", "PCM"],
             text=True, stderr=subprocess.DEVNULL, timeout=2,
         )
         import re
@@ -484,8 +485,9 @@ def restore_audio_volume(ctx: dict | None) -> None:
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
         elif kind == "alsa":
+            from bigbox import audio as _a
             subprocess.run(
-                ["amixer", "-c", "1", "sset", "PCM", f"{vol}%"],
+                ["amixer", "-c", str(_a.output_card()), "sset", "PCM", f"{vol}%"],
                 check=False, timeout=2,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
