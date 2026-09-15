@@ -36,6 +36,12 @@ class ButtonConfig:
     debounce_ms: int = 30
     repeat_delay_ms: int = 400
     repeat_interval_ms: int = 90
+    # Native HID-joystick (gamepad) input — see bigbox.input.joystick.
+    joy_enabled: bool = True
+    joy_devnode: str = ""          # explicit /dev/input/eventN, "" = auto-detect
+    joy_dpad: str = "auto"         # auto|hat0|hat1|buttons|stick|both
+    joy_deadzone: float = 0.15     # stick-source deadzone (0..0.9)
+    joy_buttons: dict[int, Button] = field(default_factory=dict)
 
 
 _ETC_OVERRIDE = Path("/etc/bigbox/buttons.toml")
@@ -70,6 +76,44 @@ def _resolve_keysym(name: str) -> int | None:
     return getattr(pygame, attr, None)
 
 
+# Keys reserved in the [joystick] section that are settings, not button maps.
+_JOY_RESERVED = {"enabled", "devnode", "dpad", "deadzone", "mode"}
+
+
+def _resolve_evdev_code(name: str) -> int | None:
+    """Turn a joystick button name ("BTN_SOUTH") or raw int ("304") into the
+    evdev code int. Returns None for unknown names."""
+    try:
+        return int(name)
+    except ValueError:
+        pass
+    try:
+        from evdev import ecodes
+        return int(getattr(ecodes, str(name).upper()))
+    except Exception:
+        return None
+
+
+def _fmt_toml_value(v: object) -> str:
+    """Format a value read back from tomllib as valid TOML (strings quoted,
+    booleans/numbers bare)."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    return f'"{str(v)}"'
+
+
+def _sorted_toml_items(table: dict) -> list[tuple[str, object]]:
+    """Stable, human-friendly ordering for a TOML table: reserved settings
+    first (enabled, devnode, dpad, deadzone), then button codes."""
+    def rank(item: tuple) -> tuple:
+        # Keys may be int (bare TOML keys) or str — compare strings only.
+        key = str(item[0])
+        return (0 if item[0] in _JOY_RESERVED else 1, key)
+    return sorted(table.items(), key=rank)
+
+
 def load_button_config(path: Path | None = None) -> ButtonConfig:
     p = path or _resolve_path()
     raw = tomllib.loads(p.read_text())
@@ -94,12 +138,31 @@ def load_button_config(path: Path | None = None) -> ButtonConfig:
             continue
 
     behavior = raw.get("behavior", {})
+
+    joy = raw.get("joystick", {})
+    joy_buttons: dict[int, Button] = {}
+    for name, btn_name in joy.items():
+        if name in _JOY_RESERVED:
+            continue
+        code = _resolve_evdev_code(str(name))
+        if code is None:
+            continue
+        try:
+            joy_buttons[code] = Button(str(btn_name).upper())
+        except ValueError:
+            continue
+
     return ButtonConfig(
         pins=pins,
         keymap=keymap,
         debounce_ms=int(behavior.get("debounce_ms", 30)),
         repeat_delay_ms=int(behavior.get("repeat_delay_ms", 400)),
         repeat_interval_ms=int(behavior.get("repeat_interval_ms", 90)),
+        joy_enabled=bool(joy.get("enabled", True)),
+        joy_devnode=str(joy.get("devnode", "")),
+        joy_dpad=str(joy.get("dpad", "auto")),
+        joy_deadzone=float(joy.get("deadzone", 0.15)),
+        joy_buttons=joy_buttons,
     )
 
 
@@ -135,6 +198,7 @@ def save_keymap(keymap: dict[int, Button]) -> bool:
 
     pins = existing.get("pins", {})
     behavior = existing.get("behavior", {})
+    joystick = existing.get("joystick", {})
 
     lines: list[str] = [
         "# bigbox button mapper — written by Settings → System → Button Mapper.",
@@ -154,6 +218,16 @@ def save_keymap(keymap: dict[int, Button]) -> bool:
         lines.append("[pins]")
         for k, v in pins.items():
             lines.append(f"{k} = {int(v)}")
+        lines.append("")
+
+    # The joystick section is a hand-served table (button codes → Button);
+    # the Mapper doesn't edit it, but it MUST survive a keymap save or a
+    # user's gamepad remap would silently vanish on the next binding.
+    if joystick:
+        lines.append("[joystick]")
+        for k, v in _sorted_toml_items(joystick):
+            key = str(k) if isinstance(k, int) else f'"{k}"'
+            lines.append(f"{key} = {_fmt_toml_value(v)}")
         lines.append("")
 
     lines.append("[behavior]")

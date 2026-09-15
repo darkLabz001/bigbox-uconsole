@@ -16,6 +16,28 @@
 
 [keymap]
 
+# --- Native gamepad (USB-HID joystick) input --------------------------------
+# The uConsole controller presents the gamepad area either as keyboard keysyms
+# (rear PD2 switch in keyboard mode — see bigbox.input.keyboard) or as a USB
+# joystick. Either way bigbox drives the same D-pad / face / shoulder /
+# Select+Start buttons. Defaults below match a standard XInput-style layout;
+# override any button by writing its evdev code name (or integer) here:
+#
+#   [joystick]
+#   enabled  = true
+#   devnode  = ""            # "/dev/input/eventN" to pin a device
+#   dpad     = "auto"        # auto|hat0|hat1|buttons|stick|both
+#   deadzone = 0.15          # for a stick-sourced D-pad
+#   "BTN_SOUTH"     = "A"    # XInput: A = south/east/north/west face
+#   "BTN_EAST"      = "B"
+#   "BTN_NORTH"     = "X"
+#   "BTN_WEST"      = "Y"
+#   "BTN_TL"        = "LL"
+#   "BTN_TR"        = "RR"
+#   "BTN_SELECT"    = "SELECT"
+#   "BTN_START"     = "START"
+[joystick]
+
 # --- Behavior tunables --------------------------------------------------------
 # These still apply: GPIO repeat behavior is handled differently for
 # keyboards (the kernel auto-repeats KEYDOWN events for you), but bigbox

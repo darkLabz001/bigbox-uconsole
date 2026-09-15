@@ -393,6 +393,22 @@ class App:
                 print(f"[bigbox] GPIO init failed ({e}); keyboard input only")
                 self._gpio = None
 
+        # Native HID-joystick (gamepad) input: with the uConsole's rear PD2
+        # switch in joystick mode the gamepad area registers as a USB joystick
+        # (D-pad hat/buttons + BTN_* face/select/start) rather than keysyms.
+        # evdev thread pushes ButtonEvents onto the same bus as the keyboard,
+        # so D-pad/face buttons behave identically in both switch modes.
+        # Disable with `enabled = false` in [joystick].
+        self._joy = None
+        if cfg.joy_enabled:
+            try:
+                from bigbox.input.joystick import JoystickInput
+                self._joy = JoystickInput(self.bus, cfg)
+                self._joy.start()
+            except Exception as e:
+                print(f"[bigbox] joystick init failed ({e}); keyboard input only")
+                self._joy = None
+
         self._start_web_server()
 
     def _start_web_server(self) -> None:
