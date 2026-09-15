@@ -48,6 +48,9 @@ from bigbox.ui.loot import LootGalleryView
 from bigbox.ui.wifi_lite import (
     ProbeSnifferView, BeaconFloodView, KarmaLiteView,
 )
+from bigbox.ui.mesh import MeshtasticView
+from bigbox.ui.qflipper import QFlipperView
+from bigbox.ui.pwnagotchi import PwnagotchiView
 
 __all__ = [
     "Action",
@@ -104,4 +107,7 @@ __all__ = [
     "ProbeSnifferView",
     "BeaconFloodView",
     "KarmaLiteView",
+    "MeshtasticView",
+    "QFlipperView",
+    "PwnagotchiView",
 ]

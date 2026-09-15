@@ -27,6 +27,10 @@ def _trackers(ctx: SectionContext) -> None:
     ctx.show_trackers()
 
 
+def _qflipper(ctx: SectionContext) -> None:
+    ctx.show_qflipper()
+
+
 def build() -> Section:
     return Section(
         title="Bluetooth",
@@ -35,6 +39,7 @@ def build() -> Section:
         background_img=load_background("bluetooth"),
         actions=[
             Action("Tracker Detector", _trackers, "AirTag/SmartTag/Tile follow-alarm"),
+            Action("qFlipper", _qflipper, "Flipper Zero device manager"),
             Action("BLE Spam (AppleJuice)", _ble_spam, "spoof pairing popups"),
             Action("Controller info", _ctl_show),
             Action("Known devices", _devices),

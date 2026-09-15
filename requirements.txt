@@ -16,7 +16,6 @@ cryptography
 bcrypt
 pynacl
 rich>=13.0.0
-netifaces==0.11.0
 ping3>=4.0.0
 get-mac>=0.9.0
 smbprotocol>=1.10.0
@@ -33,3 +32,6 @@ psutil
 yt-dlp
 evdev
 segno
+bleak>=0.20.0
+meshtastic>=2.3,<3
+paho-mqtt>=1.6

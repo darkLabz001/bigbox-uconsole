@@ -29,11 +29,15 @@ from bigbox.gps import GPSReader
 from bigbox import system as system_mod
 from bigbox import background as bg_mod
 from bigbox import activity as activity_mod
+from bigbox.web import flipper_api
 
 if TYPE_CHECKING:
     from bigbox.app import App
 
 app = FastAPI()
+
+
+app.include_router(flipper_api.router)
 
 
 @app.middleware("http")

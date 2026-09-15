@@ -85,6 +85,10 @@ def _ghost_mode(ctx: SectionContext) -> None:
     ctx.show_ghost_mode()
 
 
+def _pwnagotchi(ctx: SectionContext) -> None:
+    ctx.show_pwnagotchi()
+
+
 def _username_search(ctx: SectionContext) -> None:
     """Sherlock — search a username across hundreds of social networks."""
     def _go(val: str | None) -> None:
@@ -169,6 +173,7 @@ def build() -> Section:
             Action("Traffic Cam Browser", _traffic_cam, "public traffic camera feeds"),
             Action("FlockSeeker", _flock_seeker, "detect ALPR infrastructure"),
             Action("Wardriving", _wardrive, "GPS-tagged Wi-Fi+BT for WiGLE"),
+            Action("Pwnagotchi", _pwnagotchi, "Handshake Harvester (hcxdumptool)"),
             Action("Ghost Mode Radar", _ghost_mode, "Anti-stalking tracker detector"),
             Action("Ping sweep", _ping_sweep, "host discovery"),
             Action("ARP scan", _arp_scan, "local discovery"),

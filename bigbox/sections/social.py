@@ -45,6 +45,11 @@ def _achievements(ctx: SectionContext) -> None:
     ctx.show_achievements()
 
 
+def _open_meshtastic(ctx: SectionContext) -> None:
+    """LoRa mesh chat via USB dongle, bridged to the global internet mesh."""
+    ctx.show_meshtastic()
+
+
 def _mission_report(ctx: SectionContext) -> None:
     """Session summary and loot aggregator."""
     ctx.show_mission_report()
@@ -60,6 +65,7 @@ def build() -> Section:
             Action("Operational Rank", _achievements, "Stats and unlocked medals"),
             Action("Session Debrief", _mission_report, "Current session summary"),
             Action("Global Chat", _open_chat, "darksec.uk in-device chat"),
+            Action("Meshtastic", _open_meshtastic, "LoRa mesh + global internet bridge"),
             Action("Tactical Mail", _open_mail, "IMAP/SMTP email client"),
             Action("Tactical Messenger", _open_messenger, "Free Web/Gateway SMS"),
             Action("Dead Drop", _open_deaddrop, "Rogue AP offline chatroom"),
