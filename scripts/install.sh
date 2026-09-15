@@ -38,11 +38,12 @@ apt-get install -y --no-install-recommends \
     xserver-xorg xinit x11-xserver-utils \
     curl ca-certificates fonts-dejavu-core unzip
 
-# Optional tools/emulators, installed best-effort. Several are missing on Kali
-# arm64 (mgba-sdl / pcsxr / mednafen, and kismet on some releases); a single
-# batch apt-get fails atomically on the first missing one and aborts the whole
-# install. Per-package + best-effort means available packages install and
-# unavailable ones are simply skipped.
+# Optional tools/emulators, installed best-effort. Several are missing on some
+# repos/images (mgba-sdl / pcsxr / mednafen are absent on Kali arm64; tor and
+# bettercap can be absent on RPiOS-Lite); a single batch apt-get fails
+# atomically on the first missing one and aborts the whole install.
+# Per-package + best-effort means available packages install and unavailable
+# ones are simply skipped.
 for pkg in \
     nmap arp-scan \
     aircrack-ng iw wireless-tools \
@@ -54,6 +55,40 @@ for pkg in \
     apt-get install -y --no-install-recommends "$pkg" \
         || echo "  (skipping unavailable package: $pkg)"
 done
+
+# Tool-support packages bigbox views exec directly. Same best-effort rules.
+for pkg in \
+    hostapd dnsmasq \
+    tor \
+    ffmpeg exiftool whois \
+    hcxtools hcxdumptool \
+    wordlists \
+    pulseaudio-utils sqlite3 traceroute dnsutils iputils-ping \
+    net-tools; do
+    apt-get install -y --no-install-recommends "$pkg" \
+        || echo "  (skipping unavailable package: $pkg)"
+done
+
+# SDR suite (Waveform section). Needs an RTL-SDR dongle to be useful, so
+# strictly optional, but install the tooling so the section runs when one is
+# plugged in. rtlamr / dump1090 / gpredict ship as source in some repos and
+# are simply skipped here if apt can't provide them.
+for pkg in \
+    rtl-sdr rtl-433 rtl-ais rtlsdr-scanner \
+    multimon-ng dump1090-mutability gpredict \
+    sox; do
+    apt-get install -y --no-install-recommends "$pkg" \
+        || echo "  (skipping unavailable package: $pkg)"
+done
+
+# wordlists ships compressed as rockyou.txt.gz on Kali — expand it so
+# wifite/crack-handshake find the dictionary at /usr/share/wordlists/rockyou.txt.
+if [[ -f /usr/share/wordlists/rockyou.txt.gz ]] && \
+   [[ ! -f /usr/share/wordlists/rockyou.txt ]]; then
+    echo "==> expanding rockyou wordlist"
+    zcat /usr/share/wordlists/rockyou.txt.gz > /usr/share/wordlists/rockyou.txt \
+        || echo "  (couldn't expand rockyou — install wordlists manually)"
+fi
 
 # --- 1b. tailscale ------------------------------------------------------------
 if ! command -v tailscale >/dev/null 2>&1; then

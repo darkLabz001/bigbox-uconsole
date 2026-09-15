@@ -23,6 +23,7 @@ PKGS=(
     python3-serial rfkill curl ca-certificates fonts-dejavu-core
     traceroute dnsutils iputils-ping sqlite3 build-essential pkg-config
     hostapd dnsmasq unzip
+    tor ffmpeg exiftool whois hcxtools hcxdumptool net-tools
 )
 
 NEEDED=()
